@@ -401,6 +401,22 @@
     .box-option.notice-preview { border-left: 3px solid #5ac8fa; }
     .box-option.text-preview { border-left: 3px solid #af52de; }
     .box-option.gallery-preview { border-left: 3px solid #ff9500; }
+    .box-option.draw-preview { border-left: 3px solid #007aff; background: #eef6ff; }
+    .draw-type-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .draw-type-row .btn { flex: 1; }
+    .draw-type-row .btn.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    #undoBtn:disabled {
+      opacity: 0.35;
+      pointer-events: none;
+    }
 
     .gallery-target {
       text-align: left;
@@ -649,6 +665,7 @@
   <div id="editorScreen" class="screen">
     <div class="top-bar">
       <button class="btn btn-ghost" id="menuBtn" style="min-height:40px; padding:0 12px;">☰</button>
+      <button class="btn btn-ghost" id="undoBtn" style="min-height:40px; padding:0 12px;" disabled title="Undo">↩</button>
       <h2 id="fileLabel">Iggypop.html</h2>
       <span class="status-pill" id="saveStatus">Saved</span>
       <span class="status-pill" id="editHint" style="background:#eef2ff;color:#3730a3;">Press & drag to select</span>
@@ -731,8 +748,17 @@
       <h3>Add Text Box</h3>
       <button type="button" class="drawer-close" data-close aria-label="Close">✕</button>
     </div>
-    <p class="photo-hint">Tap where you want the box on the page first, or it will be added to the current section.</p>
-    <div class="box-options">
+    <p class="photo-hint">Tap where you want the box on the page first, or draw a box to an exact size anywhere on the page.</p>
+    <div class="draw-type-row" id="drawTypeRow">
+      <button type="button" class="btn btn-ghost active" data-draw-type="hero">Hero style</button>
+      <button type="button" class="btn btn-ghost" data-draw-type="notice">Notice style</button>
+    </div>
+    <button type="button" class="box-option draw-preview" id="drawBoxBtn">
+      <strong>Draw box on page</strong>
+      <span>Click and drag anywhere on the page to create a box at that exact size and position.</span>
+    </button>
+    <p class="photo-hint" id="drawBoxHint" style="display:none; color:#007aff; margin-top:10px;">Draw mode on — drag on the page above. Tap <strong>Box</strong> again to stop.</p>
+    <div class="box-options" style="margin-top:14px;">
       <button type="button" class="box-option hero-preview" data-box="hero">
         <strong>Hero Box</strong>
         <span>White rounded box with heading — like your main page sections.</span>
@@ -892,6 +918,18 @@
     let selectedGallery = null;
     let editorEnhancementsReady = false;
     let savedSelectionRanges = null;
+    let boxDrawMode = false;
+    let boxDrawType = 'hero';
+    let boxDrawActive = false;
+    let boxDrawStart = null;
+    let boxDrawPreview = null;
+    let boxDrawPage = null;
+    let boxDrawPointerId = null;
+    const ACTIVE_PAGE_KEY = 'iggy_active_page';
+    let undoStack = [];
+    let undoIgnore = false;
+    let inputUndoTimer = null;
+    const UNDO_LIMIT = 40;
 
     function authHeaders() {
       return authToken ? { Authorization: 'Bearer ' + authToken } : {};
@@ -907,6 +945,110 @@
       isDirty = dirty;
       saveStatus.textContent = dirty ? 'Unsaved' : 'Saved';
       saveStatus.classList.toggle('unsaved', dirty);
+    }
+
+    function getCurrentPageId() {
+      const doc = previewFrame.contentDocument;
+      if (doc) {
+        const active = doc.querySelector('.page.active');
+        if (active?.id) return active.id;
+      }
+      try {
+        return sessionStorage.getItem(ACTIVE_PAGE_KEY) || 'home';
+      } catch (_) {
+        return 'home';
+      }
+    }
+
+    function restoreActivePage(doc, pageId) {
+      if (!doc || !pageId) return;
+      const target = doc.getElementById(pageId);
+      if (!target?.classList.contains('page')) return;
+      if (doc.defaultView?.showPage) {
+        doc.defaultView.showPage(pageId);
+        return;
+      }
+      doc.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+      target.classList.add('active');
+      doc.querySelectorAll('.side-nav a').forEach(a => a.classList.remove('active'));
+      const link = doc.querySelector(`.side-nav a[data-page="${pageId}"]`);
+      if (link) link.classList.add('active');
+      try {
+        sessionStorage.setItem(ACTIVE_PAGE_KEY, pageId);
+      } catch (_) {}
+    }
+
+    function getEditorContent() {
+      if (!isCodeMode && previewFrame.contentDocument?.body) {
+        syncFromPreview();
+      }
+      return codeEditor.value;
+    }
+
+    function updateUndoUI() {
+      const btn = document.getElementById('undoBtn');
+      if (btn) btn.disabled = undoStack.length < 2;
+    }
+
+    function recordUndoSnapshot() {
+      if (undoIgnore) return;
+      const content = getEditorContent();
+      const pageId = getCurrentPageId();
+      const last = undoStack[undoStack.length - 1];
+      if (last && last.content === content && last.pageId === pageId) return;
+      undoStack.push({ content, pageId });
+      if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+      updateUndoUI();
+    }
+
+    function applyEditorContent(content, pageId) {
+      undoIgnore = true;
+      codeEditor.value = content;
+      const doc = previewFrame.contentDocument;
+      if (doc?.body && !isCodeMode) {
+        resetEditorEnhancements();
+        const match = content.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+        if (match) {
+          doc.body.innerHTML = match[1];
+          setupPreviewDocument(doc);
+          restoreActivePage(doc, pageId || getCurrentPageId());
+        }
+      }
+      undoIgnore = false;
+      setDirty(true);
+      updateUndoUI();
+    }
+
+    function undo() {
+      if (undoStack.length < 2) {
+        showToast('Nothing to undo');
+        return;
+      }
+      undoIgnore = true;
+      undoStack.pop();
+      const snapshot = undoStack[undoStack.length - 1];
+      applyEditorContent(snapshot.content, snapshot.pageId);
+      undoIgnore = false;
+      showToast('Undo');
+      updateUndoUI();
+    }
+
+    function resetUndoHistory(content) {
+      undoIgnore = true;
+      undoStack = [];
+      if (content) {
+        let pageId = 'home';
+        try {
+          pageId = sessionStorage.getItem(ACTIVE_PAGE_KEY) || 'home';
+        } catch (_) {}
+        undoStack.push({ content, pageId });
+      }
+      undoIgnore = false;
+      updateUndoUI();
+    }
+
+    function commitUndoSnapshot() {
+      if (!undoIgnore) recordUndoSnapshot();
     }
 
     function closeDrawers() {
@@ -986,6 +1128,28 @@
         .hero h2 { margin-bottom: 8px; }
         .editor-selected { outline: 2px solid #007aff !important; outline-offset: 3px; }
         .gallery-target-selected { outline: 2px solid #007aff !important; outline-offset: 3px; }
+        .page.has-placed-boxes,
+        body.iggy-box-draw-mode .page.active {
+          position: relative !important;
+        }
+        body.iggy-box-draw-mode .page.active {
+          cursor: crosshair !important;
+        }
+        body.iggy-box-draw-mode .page.active * {
+          cursor: crosshair !important;
+        }
+        .box-draw-preview {
+          position: absolute;
+          border: 2px dashed #007aff;
+          background: rgba(0, 122, 255, 0.12);
+          pointer-events: none;
+          z-index: 1000;
+          box-sizing: border-box;
+          border-radius: 12px;
+        }
+        .editor-placed-box {
+          z-index: 2;
+        }
         body[contenteditable="true"] .hero,
         body[contenteditable="true"] .puppy-box,
         body[contenteditable="true"] .card,
@@ -1053,7 +1217,7 @@
     function getResizableTarget(node) {
       if (!node) return null;
       const el = node.nodeType === 1 ? node : node.parentElement;
-      return el?.closest('.hero, .puppy-box, .card, .bordered-photo, .photo-gallery-wrap, img:not(.gallery-slide)');
+      return el?.closest('.hero, .puppy-box, .card, .bordered-photo, .photo-gallery-wrap, .editor-placed-box, img:not(.gallery-slide)');
     }
 
     function isPhotosMode() {
@@ -1253,20 +1417,40 @@
       }
       const name = el.classList.contains('hero') ? 'Text box'
         : el.classList.contains('puppy-box') ? 'Notice box'
+        : el.classList.contains('editor-placed-box') ? 'Drawn box'
         : el.classList.contains('card') ? 'Card'
         : el.classList.contains('photo-gallery-wrap') ? 'Gallery'
         : el.tagName === 'IMG' ? 'Photo' : 'Item';
       label.textContent = `Resizing: ${name}`;
       const inlineWidth = parseInt(el.style.width, 10);
       const width = Number.isFinite(inlineWidth) ? inlineWidth : 100;
+      const isPxWidth = el.style.width?.includes('px') || el.classList.contains('editor-placed-box');
+      if (isPxWidth && el.classList.contains('editor-placed-box')) {
+        const page = el.parentElement;
+        const pageWidth = page?.clientWidth || 1;
+        const percent = Math.min(100, Math.max(30, Math.round((inlineWidth / pageWidth) * 100)));
+        slider.value = percent;
+        value.textContent = percent;
+        return;
+      }
       slider.value = Math.min(100, Math.max(30, width));
       value.textContent = slider.value;
     }
 
     function applyResizeStyles(el, percent, fullWidth) {
-      const value = fullWidth ? '100%' : `${percent}%`;
+      const page = el.parentElement;
+      const isPlaced = el.classList.contains('editor-placed-box');
+      let value = fullWidth ? '100%' : `${percent}%`;
+      if (isPlaced && page) {
+        const pageWidth = page.clientWidth || 1;
+        value = fullWidth ? `${pageWidth}px` : `${Math.round(pageWidth * percent / 100)}px`;
+      }
       el.style.setProperty('width', value, 'important');
-      el.style.setProperty('max-width', value, 'important');
+      if (!isPlaced) {
+        el.style.setProperty('max-width', fullWidth ? '100%' : `${percent}%`, 'important');
+      } else {
+        el.style.removeProperty('max-width');
+      }
       el.style.setProperty('box-sizing', 'border-box', 'important');
 
       if (el.tagName === 'IMG' || el.classList.contains('hero') || el.classList.contains('puppy-box') ||
@@ -1275,9 +1459,218 @@
         el.style.setProperty('margin-left', 'auto', 'important');
         el.style.setProperty('margin-right', 'auto', 'important');
       }
+      if (el.classList.contains('editor-placed-box')) {
+        el.style.setProperty('display', 'block', 'important');
+        el.style.setProperty('margin', '0', 'important');
+      }
 
       if (el.tagName === 'IMG') {
         el.style.setProperty('height', 'auto', 'important');
+      }
+      if (isPlaced && page) {
+        updatePageMinHeight(page);
+      }
+    }
+
+    function getActivePage(doc) {
+      return doc.querySelector('.page.active') || doc.querySelector('.content') || doc.body;
+    }
+
+    function preparePageForPlacedBoxes(page) {
+      if (!page) return;
+      page.classList.add('has-placed-boxes');
+      if (!page.style.position || page.style.position === 'static') {
+        page.style.position = 'relative';
+      }
+    }
+
+    function getPagePoint(page, clientX, clientY) {
+      const rect = page.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+      const maxX = page.clientWidth;
+      const maxY = page.clientHeight;
+      return {
+        x: Math.max(0, Math.min(x, maxX)),
+        y: Math.max(0, Math.min(y, maxY))
+      };
+    }
+
+    function normalizeDrawRect(start, end, minSize = 32) {
+      let left = Math.min(start.x, end.x);
+      let top = Math.min(start.y, end.y);
+      let width = Math.abs(end.x - start.x);
+      let height = Math.abs(end.y - start.y);
+      if (width < minSize) {
+        width = minSize;
+        if (end.x < start.x) left = start.x - width;
+      }
+      if (height < minSize) {
+        height = minSize;
+        if (end.y < start.y) top = start.y - height;
+      }
+      const maxLeft = Math.max(0, (boxDrawPage?.clientWidth || width) - width);
+      const maxTop = Math.max(0, (boxDrawPage?.clientHeight || height) - height);
+      left = Math.min(left, maxLeft);
+      top = Math.min(top, maxTop);
+      return { left, top, width, height };
+    }
+
+    function cancelBoxDraw() {
+      if (boxDrawPreview?.parentNode) {
+        boxDrawPreview.parentNode.removeChild(boxDrawPreview);
+      }
+      boxDrawPreview = null;
+      boxDrawStart = null;
+      boxDrawPage = null;
+      boxDrawActive = false;
+      boxDrawPointerId = null;
+    }
+
+    function onBoxDrawMove(e) {
+      if (!boxDrawActive || e.pointerId !== boxDrawPointerId || !boxDrawPage) return;
+      e.preventDefault();
+      updateBoxDraw(getPagePoint(boxDrawPage, e.clientX, e.clientY));
+    }
+
+    function onBoxDrawUp(e) {
+      if (!boxDrawActive || e.pointerId !== boxDrawPointerId) return;
+      e.preventDefault();
+      const doc = boxDrawPage?.ownerDocument;
+      if (doc) {
+        doc.removeEventListener('pointermove', onBoxDrawMove);
+        doc.removeEventListener('pointerup', onBoxDrawUp);
+        doc.removeEventListener('pointercancel', onBoxDrawUp);
+      }
+      finishBoxDraw(getPagePoint(boxDrawPage, e.clientX, e.clientY));
+    }
+
+    function startBoxDraw(page, point, pointerId) {
+      preparePageForPlacedBoxes(page);
+      boxDrawPage = page;
+      boxDrawStart = point;
+      boxDrawActive = true;
+      boxDrawPointerId = pointerId;
+      const doc = page.ownerDocument;
+      boxDrawPreview = doc.createElement('div');
+      boxDrawPreview.className = 'box-draw-preview';
+      boxDrawPreview.style.left = `${point.x}px`;
+      boxDrawPreview.style.top = `${point.y}px`;
+      boxDrawPreview.style.width = '0';
+      boxDrawPreview.style.height = '0';
+      page.appendChild(boxDrawPreview);
+      doc.addEventListener('pointermove', onBoxDrawMove);
+      doc.addEventListener('pointerup', onBoxDrawUp);
+      doc.addEventListener('pointercancel', onBoxDrawUp);
+    }
+
+    function updateBoxDraw(point) {
+      if (!boxDrawActive || !boxDrawPreview || !boxDrawStart) return;
+      const rect = normalizeDrawRect(boxDrawStart, point, 4);
+      boxDrawPreview.style.left = `${rect.left}px`;
+      boxDrawPreview.style.top = `${rect.top}px`;
+      boxDrawPreview.style.width = `${rect.width}px`;
+      boxDrawPreview.style.height = `${rect.height}px`;
+    }
+
+    function createPlacedBox(doc, rect, type) {
+      const box = createTextBox(type === 'notice' ? 'notice' : 'hero');
+      if (!box) return null;
+      box.classList.add('editor-placed-box');
+      box.style.setProperty('position', 'absolute', 'important');
+      box.style.setProperty('left', `${rect.left}px`, 'important');
+      box.style.setProperty('top', `${rect.top}px`, 'important');
+      box.style.setProperty('width', `${rect.width}px`, 'important');
+      box.style.setProperty('height', `${rect.height}px`, 'important');
+      box.style.setProperty('box-sizing', 'border-box', 'important');
+      box.style.setProperty('overflow', 'auto', 'important');
+      box.style.setProperty('margin', '0', 'important');
+      box.style.removeProperty('max-width');
+      return box;
+    }
+
+    function updatePageMinHeight(page) {
+      if (!page) return;
+      let maxBottom = page.scrollHeight;
+      page.querySelectorAll('.editor-placed-box').forEach(box => {
+        const top = parseInt(box.style.top, 10) || 0;
+        const height = parseInt(box.style.height, 10) || box.offsetHeight;
+        maxBottom = Math.max(maxBottom, top + height + 24);
+      });
+      page.style.minHeight = `${maxBottom}px`;
+    }
+
+    function finishBoxDraw(point) {
+      const page = boxDrawPage;
+      const start = boxDrawStart;
+      cancelBoxDraw();
+      if (!page || !start) return;
+
+      const rect = normalizeDrawRect(start, point, 32);
+      const doc = page.ownerDocument;
+      const box = createPlacedBox(doc, rect, boxDrawType);
+      if (!box) return;
+
+      page.appendChild(box);
+      updatePageMinHeight(page);
+      selectElement(box);
+      syncFromPreview();
+      setDirty(true);
+      commitUndoSnapshot();
+      setBoxDrawMode(false);
+      showToast('Box created — tap inside to edit text');
+
+      setTimeout(() => {
+        if (!doc.body) return;
+        doc.body.contentEditable = 'true';
+        const heading = box.querySelector('h2, h3');
+        if (heading) {
+          const range = doc.createRange();
+          range.selectNodeContents(heading);
+          range.collapse(false);
+          const sel = doc.getSelection();
+          sel?.removeAllRanges();
+          sel?.addRange(range);
+        }
+      }, 50);
+
+      try {
+        box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } catch (_) {}
+    }
+
+    function updateDrawModeUI() {
+      const hint = document.getElementById('drawBoxHint');
+      const boxBtn = document.getElementById('boxBtn');
+      const editHint = document.getElementById('editHint');
+      if (hint) hint.style.display = boxDrawMode ? 'block' : 'none';
+      if (boxBtn) boxBtn.classList.toggle('draw-mode-active', boxDrawMode);
+      if (editHint && boxDrawMode) {
+        editHint.textContent = 'Drag on page to draw a box';
+      } else if (editHint && !boxDrawMode) {
+        editHint.textContent = 'Press & drag to select';
+      }
+    }
+
+    function setBoxDrawMode(enabled, type) {
+      if (type) boxDrawType = type;
+      boxDrawMode = enabled;
+      const doc = getPreviewDoc();
+      cancelBoxDraw();
+      if (enabled) {
+        ensureDocumentMode();
+        if (doc?.body) {
+          doc.body.classList.add('iggy-box-draw-mode');
+          doc.body.contentEditable = 'false';
+        }
+        updateDrawModeUI();
+        showToast('Drag anywhere on the page to draw a box');
+      } else {
+        if (doc?.body) {
+          doc.body.classList.remove('iggy-box-draw-mode');
+          doc.body.contentEditable = 'true';
+        }
+        updateDrawModeUI();
       }
     }
 
@@ -1341,6 +1734,7 @@
       }
       syncFromPreview();
       setDirty(true);
+      commitUndoSnapshot();
       showToast(gapSize === 'lg' ? 'Large gap added' : gapSize === 'md' ? 'Medium gap added' : 'Small gap added');
     }
 
@@ -1475,6 +1869,25 @@
           return;
         }
 
+        if (boxDrawMode) {
+          const page = getActivePage(doc);
+          const inPage = page && (page === e.target || page.contains(e.target));
+          if (!inPage) {
+            showToast('Drag on the page content area');
+            return;
+          }
+          const onContent = e.target.closest('.hero, .puppy-box, .editor-placed-box, .card, .photo-gallery-wrap, p, h1, h2, h3, h4, li, img, .gallery-frame');
+          if (onContent && e.target !== page) {
+            doc.body.contentEditable = 'true';
+            return;
+          }
+          e.preventDefault();
+          e.stopPropagation();
+          doc.body.contentEditable = 'false';
+          startBoxDraw(page, getPagePoint(page, e.clientX, e.clientY), e.pointerId);
+          return;
+        }
+
         const galleryEl = getGalleryFromTarget(e.target);
         if (galleryEl && isPhotosMode()) {
           selectGallery(galleryEl);
@@ -1487,6 +1900,11 @@
       });
 
       doc.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+          e.preventDefault();
+          undo();
+          return;
+        }
         if (e.key !== 'Enter') return;
         if (e.shiftKey) return;
 
@@ -1505,6 +1923,7 @@
             doc.execCommand('insertLineBreak');
             syncFromPreview();
             setDirty(true);
+            commitUndoSnapshot();
             return;
           }
         }
@@ -1524,11 +1943,14 @@
         selection.addRange(range);
         syncFromPreview();
         setDirty(true);
+        commitUndoSnapshot();
       });
 
       doc.addEventListener('input', () => {
         syncFromPreview();
         setDirty(true);
+        clearTimeout(inputUndoTimer);
+        inputUndoTimer = setTimeout(() => commitUndoSnapshot(), 600);
       });
 
       doc.addEventListener('selectionchange', () => {
@@ -1555,7 +1977,7 @@
     function setupPreviewDocument(doc) {
       if (!doc?.body) return;
       injectEditorStyles(doc);
-      doc.body.contentEditable = 'true';
+      doc.body.contentEditable = boxDrawMode ? 'false' : 'true';
       doc.body.spellcheck = true;
       doc.body.style.outline = 'none';
       doc.body.style.overflowX = 'hidden';
@@ -1564,6 +1986,13 @@
       normalizeGalleries(doc);
       setupGalleryNavigation(doc);
       setupEditorEnhancements(doc);
+      if (boxDrawMode) {
+        doc.body.classList.add('iggy-box-draw-mode');
+      }
+      doc.querySelectorAll('.editor-placed-box').forEach(box => {
+        preparePageForPlacedBoxes(box.parentElement);
+        updatePageMinHeight(box.parentElement);
+      });
     }
 
     function resetEditorEnhancements() {
@@ -1583,6 +2012,7 @@
       return node.classList.contains('hero')
         || node.classList.contains('puppy-box')
         || node.classList.contains('photo-gallery-wrap')
+        || node.classList.contains('editor-placed-box')
         || (node.tagName === 'IMG' && node.classList.contains('bordered-photo'));
     }
 
@@ -1640,6 +2070,7 @@
 
       syncFromPreview();
       setDirty(true);
+      commitUndoSnapshot();
       return true;
     }
 
@@ -1758,6 +2189,7 @@
       const data = await res.json();
       codeEditor.value = data.content;
       setDirty(false);
+      resetUndoHistory(data.content);
       await refreshFiles();
 
       if (name.endsWith('.html') && !isCodeMode) {
@@ -1778,12 +2210,15 @@
 
       const needsReload = forceReload || !previewFrame.src || !previewFrame.contentDocument?.body;
       if (!needsReload) {
-        setupPreviewDocument(previewFrame.contentDocument);
+        const doc = previewFrame.contentDocument;
+        setupPreviewDocument(doc);
+        restoreActivePage(doc, getCurrentPageId());
         return;
       }
 
       resetEditorEnhancements();
-      previewFrame.src = '/preview?file=' + encodeURIComponent(currentFile) + '&t=' + Date.now();
+      const pageId = getCurrentPageId();
+      previewFrame.src = '/preview?file=' + encodeURIComponent(currentFile) + '&t=' + Date.now() + '#' + pageId;
       previewFrame.onload = () => {
         const doc = previewFrame.contentDocument;
         if (!doc) return;
@@ -1792,6 +2227,7 @@
           viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, viewport-fit=cover');
         }
         setupPreviewDocument(doc);
+        restoreActivePage(doc, pageId);
       };
     }
 
@@ -1821,6 +2257,7 @@
       });
       if (res.ok) {
         setDirty(false);
+        resetUndoHistory(codeEditor.value);
         showToast('Saved!');
         if (!isCodeMode) showDocumentMode(true);
         return true;
@@ -1955,6 +2392,7 @@
       savePreviewSelection();
       syncFromPreview();
       setDirty(true);
+      commitUndoSnapshot();
       showToast('Formatting applied');
     }
 
@@ -2307,6 +2745,7 @@
       updateGalleryCounterInDoc(selectedGallery);
       syncFromPreview();
       setDirty(true);
+      commitUndoSnapshot();
       refreshGalleryUI();
       showToast('Photo removed');
     }
@@ -2323,6 +2762,7 @@
       selectedElement = null;
       syncFromPreview();
       setDirty(true);
+      commitUndoSnapshot();
       refreshGalleryUI();
       showToast('Gallery deleted');
     }
@@ -2613,6 +3053,14 @@
       if (isDrawerOpen(filesDrawer)) closeDrawers();
       else openDrawer(filesDrawer);
     });
+    document.getElementById('undoBtn').addEventListener('click', () => undo());
+    document.addEventListener('keydown', e => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+        if (e.target.closest('input, textarea')) return;
+        e.preventDefault();
+        undo();
+      }
+    });
     document.getElementById('photosBtn').addEventListener('click', async () => {
       if (isDrawerOpen(photosDrawer)) {
         closeDrawers();
@@ -2646,17 +3094,31 @@
       openDrawer(resizeDrawer);
       updateResizeControls(selectedElement);
     });
+    let resizeUndoRecorded = false;
+    document.getElementById('resizeSlider').addEventListener('pointerdown', () => {
+      if (!resizeUndoRecorded) {
+        recordUndoSnapshot();
+        resizeUndoRecorded = true;
+      }
+    });
+    document.getElementById('resizeSlider').addEventListener('pointerup', () => {
+      resizeUndoRecorded = false;
+      commitUndoSnapshot();
+    });
     document.getElementById('resizeSlider').addEventListener('input', e => {
       applyResize(parseInt(e.target.value, 10), false);
     });
     document.getElementById('resizeSlider').addEventListener('change', e => {
       applyResize(parseInt(e.target.value, 10), false);
+      commitUndoSnapshot();
     });
     document.querySelectorAll('[data-size]').forEach(btn => {
       btn.addEventListener('click', () => {
+        recordUndoSnapshot();
         const val = btn.dataset.size;
         if (val === '100-full') applyResize(100, true);
         else applyResize(parseInt(val, 10), false);
+        commitUndoSnapshot();
       });
     });
     document.getElementById('spacerBtn').addEventListener('click', () => {
@@ -2669,12 +3131,29 @@
         showToast('Open Iggypop.html to add boxes');
         return;
       }
+      if (boxDrawMode) {
+        setBoxDrawMode(false);
+        closeDrawers();
+        return;
+      }
       if (isDrawerOpen(boxesDrawer)) {
         closeDrawers();
         return;
       }
       ensureDocumentMode();
       openDrawer(boxesDrawer);
+    });
+    document.getElementById('drawBoxBtn').addEventListener('click', () => {
+      ensureDocumentMode();
+      setBoxDrawMode(true, boxDrawType);
+      closeDrawers();
+    });
+    document.querySelectorAll('[data-draw-type]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-draw-type]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        boxDrawType = btn.dataset.drawType || 'hero';
+      });
     });
     document.querySelectorAll('[data-box]').forEach(btn => {
       btn.addEventListener('click', () => addTextBox(btn.dataset.box));
@@ -2733,7 +3212,11 @@
       btn.addEventListener('click', () => insertSectionGap(btn.dataset.sectionGap));
     });
 
-    codeEditor.addEventListener('input', () => setDirty(true));
+    codeEditor.addEventListener('input', () => {
+      setDirty(true);
+      clearTimeout(inputUndoTimer);
+      inputUndoTimer = setTimeout(() => commitUndoSnapshot(), 600);
+    });
 
     window.addEventListener('beforeunload', e => {
       if (isDirty) {

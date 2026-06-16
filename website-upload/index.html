@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IggyPop Kennel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Carlito:ital,wght@0,400;0,700;1,400;1,700&family=Caladea:ital,wght@0,400;0,700;1,400&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
 
   <style>
     * {
@@ -11,6 +14,10 @@
       margin: 0;
       padding: 0;
       font-family: Arial, sans-serif;
+    }
+
+    :root {
+      --sidebar-width: 250px;
     }
 
     body {
@@ -21,6 +28,12 @@
     header {
       background: linear-gradient(90deg, #ff8acb, #7dd3fc, #c084fc);
       color: white;
+      margin-left: var(--sidebar-width);
+      width: calc(100% - var(--sidebar-width));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       text-align: center;
       padding: 40px 20px;
     }
@@ -29,6 +42,8 @@
       font-size: 3rem;
       line-height: 1.15;
       letter-spacing: normal;
+      width: 100%;
+      text-align: center;
     }
 
     header h1 .header-brand {
@@ -59,7 +74,7 @@
     position: fixed;
     left: 0;
     top: 0;
-    width: 250px;
+    width: var(--sidebar-width);
     height: 100vh;
     background: linear-gradient(
         180deg,
@@ -132,7 +147,7 @@
 }
 
 .content {
-    margin-left: 250px;
+    margin-left: var(--sidebar-width);
     padding: 40px;
 }
     nav button {
@@ -204,6 +219,29 @@
       margin-top: 30px;
     }
 
+    @media (min-width: 901px) {
+      #home.active {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding-top: 32px;
+        padding-bottom: 40px;
+        padding-left: 5%;
+        padding-right: 5%;
+      }
+
+      #home .hero {
+        width: 100%;
+        max-width: 720px;
+      }
+
+      #home .cards {
+        width: 100%;
+        max-width: 960px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
     .card {
       background: white;
       padding: 25px;
@@ -267,6 +305,8 @@
       text-align: center;
       padding: 25px;
       margin-top: 40px;
+      margin-left: var(--sidebar-width);
+      width: calc(100% - var(--sidebar-width));
     }
 
     img {
@@ -398,10 +438,20 @@
     }
 
     .content-spacer {
-      min-height: 6px;
-      margin: 4px 0;
+      min-height: 4px;
+      margin: 2px 0;
       line-height: 1;
       padding: 0;
+    }
+
+    .content-spacer.gap-md {
+      min-height: 8px;
+      margin: 6px 0;
+    }
+
+    .content-spacer.gap-lg {
+      min-height: 14px;
+      margin: 10px 0;
     }
 
     .gallery-meta {
@@ -420,8 +470,15 @@
 
     @media (max-width: 900px) {
       header {
+        margin-left: 0;
+        width: 100%;
         padding: 28px 16px 24px;
         padding-top: 64px;
+      }
+
+      footer {
+        margin-left: 0;
+        width: 100%;
       }
 
       header h1 {
@@ -792,15 +849,15 @@
         </div>
         <div class="card">
           <h3>Family Raised</h3>
-          <p>Our puppies are loved, socialized, and raised like family.</p>
-        </div>
-      </div>
-    </section>
+          <p>Our puppies are loved, socialized, and raised like family.</p><p class="content-spacer"></p>
+        </div><p class="content-spacer"></p>
+      </div><p class="content-spacer"></p>
+    <div class="hero"><h2>AVAILABLE PUPPY</h2><p>SILVENTO SIRED GREY MALE AVAILABLE!!!!!!</p><p class="content-spacer"></p></div></section><p class="content-spacer"></p>
 
     <section id="about" class="page">
       <div class="hero">
         <h2>About Us</h2>
-        <p>IggyPop Kennel was created by owner and founder, Margaret Youkilis, from a love for Italian Greyhounds and their graceful, affectionate, and playful nature.</p><p class="content-spacer"><br></p></div><div class="photo-gallery-wrap" id="gallery2"><div class="photo-gallery" data-gallery=""><div class="gallery-frame"><div class="gallery-slides"><img class="gallery-slide active" src="images/IMG_7071-20260616-100839.jpg" alt="Gallery photo"><button type="button" class="gallery-arrow gallery-prev" aria-label="Previous photo">‹</button><button type="button" class="gallery-arrow gallery-next" aria-label="Next photo">›</button></div></div></div><div class="gallery-meta">1 / 1</div></div><p class="content-spacer"><br></p>
+        <p>IggyPop Kennel was created by owner and founder, Margaret Youkilis, from a love for Italian Greyhounds and their graceful, affectionate, and playful nature.</p><p class="content-spacer"></p></div><div class="photo-gallery-wrap" id="gallery2"><div class="photo-gallery" data-gallery=""><div class="gallery-frame"><div class="gallery-slides"><img class="gallery-slide active" src="images/IMG_7071-20260616-100839.jpg" alt="Gallery photo"><button type="button" class="gallery-arrow gallery-prev" aria-label="Previous photo">‹</button><button type="button" class="gallery-arrow gallery-next" aria-label="Next photo">›</button></div></div></div><div class="gallery-meta">1 / 1</div></div><p class="content-spacer"></p>
     </section>
 
     <section id="puppies" class="page">
@@ -844,9 +901,9 @@
     </section>
 
     <section id="planned" class="page">
-      <div class="hero" style="line-height: 1 !important;"><span style="font-size: 13px !important;">
+      <div class="hero" style=""><span style="font-size: 13px !important;">
         <h2>Planned Litters</h2>
-        <p style="line-height: 1.2 !important;">December 2026 litter planned: Katana Skywinds x Emerald Galaxy</p><p class="content-spacer"><br></p>
+        <p style="line-height: 1.2 !important;">December 2026 litter planned: Katana Skywinds x Emerald Galaxy</p><p class="content-spacer"></p>
       </span></div>
     </section>
 
@@ -946,9 +1003,7 @@
       </form>
     </section>
 
-  </div>
-
-  <footer><p>© 2026 IggyPop Kennel | Italian Greyhounds</p>
+  </div><footer><p>© 2026 IggyPop Kennel | Italian Greyhounds</p>
   </footer>
 
   <script>
@@ -1233,6 +1288,8 @@
         }
     });
   </script>
+
+
 
 
 

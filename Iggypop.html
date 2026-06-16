@@ -1083,12 +1083,34 @@
       const link = document.querySelector(`.side-nav a[data-page="${pageId}"]`);
       if (link) link.classList.add('active');
 
+      try {
+        sessionStorage.setItem('iggy_active_page', pageId);
+        const hash = '#' + pageId;
+        if (window.location.hash !== hash) {
+          history.replaceState(null, '', hash);
+        }
+      } catch (_) {}
+
       closeMobileNav();
     }
 
-    // Initialize first page and active link
+    function getInitialPageId() {
+      const fromHash = location.hash.replace(/^#/, '');
+      if (fromHash && document.getElementById(fromHash)?.classList.contains('page')) {
+        return fromHash;
+      }
+      try {
+        const fromStore = sessionStorage.getItem('iggy_active_page');
+        if (fromStore && document.getElementById(fromStore)?.classList.contains('page')) {
+          return fromStore;
+        }
+      } catch (_) {}
+      return 'home';
+    }
+
+    // Initialize page from hash or last visited section (not always home)
     document.addEventListener('DOMContentLoaded', () => {
-      showPage('home');
+      showPage(getInitialPageId());
 
       const menuToggle = document.getElementById('menuToggle');
       const navBackdrop = document.getElementById('navBackdrop');
