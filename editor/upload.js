@@ -32,11 +32,28 @@ function convertHeicToJpeg(filePath) {
   }
 }
 
+function optimizeImageForWeb(filePath) {
+  const ext = path.extname(filePath).toLowerCase();
+  if (!['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.heif'].includes(ext)) {
+    return filePath;
+  }
+  try {
+    execFileSync('sips', ['-Z', '1600', filePath]);
+    if (['.jpg', '.jpeg'].includes(ext) || filePath.toLowerCase().endsWith('.jpg')) {
+      execFileSync('sips', ['-s', 'formatOptions', '80', filePath]);
+    }
+  } catch {
+    // sips unavailable or failed — keep original
+  }
+  return filePath;
+}
+
 function saveUploadedFile(tempPath, originalName) {
   const filename = safeUploadName(originalName);
   let dest = uniquePath(PROJECT_DIR, filename);
   fs.renameSync(tempPath, dest);
   dest = convertHeicToJpeg(dest);
+  optimizeImageForWeb(dest);
   return `${PROJECT_PREFIX}/${path.basename(dest)}`;
 }
 

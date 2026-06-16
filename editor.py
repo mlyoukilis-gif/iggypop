@@ -299,6 +299,28 @@ def unique_upload_path(filename):
     return PROJECT_DIR / f'{stem}-{stamp}{suffix}'
 
 
+def optimize_image_for_web(file_path):
+    """Resize and compress photos for faster web loading."""
+    ext = file_path.suffix.lower()
+    if ext not in {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.heif'}:
+        return file_path
+    try:
+        subprocess.run(
+            ['sips', '-Z', '1600', str(file_path)],
+            check=True,
+            capture_output=True,
+        )
+        if ext in {'.jpg', '.jpeg'} or str(file_path).lower().endswith('.jpg'):
+            subprocess.run(
+                ['sips', '-s', 'formatOptions', '80', str(file_path)],
+                check=True,
+                capture_output=True,
+            )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        pass
+    return file_path
+
+
 def convert_heic_to_jpeg(file_path):
     if file_path.suffix.lower() not in {'.heic', '.heif'}:
         return file_path
@@ -320,6 +342,7 @@ def save_uploaded_bytes(data, original_name):
     dest = unique_upload_path(filename)
     dest.write_bytes(data)
     dest = convert_heic_to_jpeg(dest)
+    optimize_image_for_web(dest)
     return f'{PROJECT_PREFIX}/{dest.name}'
 
 
@@ -376,7 +399,9 @@ def build_upload_package():
             PROJECT_DIR / 'uploads' / filename,
         ):
             if candidate.exists() and candidate.is_file():
-                shutil.copy2(candidate, images_dir / filename)
+                dest = images_dir / filename
+                shutil.copy2(candidate, dest)
+                optimize_image_for_web(dest)
                 copied.add(filename)
                 break
 
