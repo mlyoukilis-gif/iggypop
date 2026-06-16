@@ -1,0 +1,14 @@
+{
+  "name": "quickbite",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace=@quickbite/web",
+    "dev:mobile": "npm run start --workspace=@quickbite/mobile",
+    "build:web": "npm run build --workspace=@quickbite/web",
+    "build:shared": "npm run build --workspace=@quickbite/shared"
+  }
+}
