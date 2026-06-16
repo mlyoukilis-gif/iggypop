@@ -1032,8 +1032,9 @@
     }
 
     function getEditorContent() {
+      flushPreviewSync();
       if (!isCodeMode && previewFrame.contentDocument?.body) {
-        syncFromPreview();
+        writePreviewBodyToEditor(previewFrame.contentDocument.body.innerHTML);
       }
       return codeEditor.value;
     }
@@ -1140,9 +1141,7 @@
 
     function cleanEditorArtifacts(doc) {
       if (!doc) return;
-      doc.querySelectorAll('.editor-selected').forEach(el => el.classList.remove('editor-selected'));
-      doc.querySelectorAll('.gallery-target-selected').forEach(el => el.classList.remove('gallery-target-selected'));
-      doc.querySelectorAll('[data-editor-resizable]').forEach(el => el.removeAttribute('data-editor-resizable'));
+      clearSelectionState(doc);
       doc.querySelectorAll('[data-gallery]').forEach(el => el.removeAttribute('data-ready'));
       doc.querySelectorAll('.gallery-frame[data-editor-swipe]').forEach(el => el.removeAttribute('data-editor-swipe'));
       doc.querySelectorAll('.gallery-drag-handle').forEach(el => el.remove());
@@ -1159,6 +1158,13 @@
       doc.body?.removeAttribute('data-gallery-clicks');
       normalizeTextSpacing(doc);
       flattenNestedBoxes(doc);
+    }
+
+    function clearSelectionState(doc) {
+      if (!doc) return;
+      doc.querySelectorAll('.editor-selected').forEach(el => el.classList.remove('editor-selected'));
+      doc.querySelectorAll('.gallery-target-selected').forEach(el => el.classList.remove('gallery-target-selected'));
+      doc.querySelectorAll('[data-editor-resizable]').forEach(el => el.removeAttribute('data-editor-resizable'));
     }
 
     function flattenNestedBoxes(doc) {
@@ -1862,7 +1868,13 @@
       doc.addEventListener('pointermove', (e) => {
         if (!galleryDragState || e.pointerId !== galleryDragState.pointerId) return;
         e.preventDefault();
-        showGalleryDropIndicator(galleryDragState.box, galleryDragState.wrap, e.clientY);
+        galleryDragState.clientY = e.clientY;
+        if (galleryDragState.indicatorRaf) return;
+        galleryDragState.indicatorRaf = requestAnimationFrame(() => {
+          if (!galleryDragState) return;
+          galleryDragState.indicatorRaf = 0;
+          showGalleryDropIndicator(galleryDragState.box, galleryDragState.wrap, galleryDragState.clientY);
+        });
       });
 
       doc.addEventListener('pointerup', (e) => {
@@ -1970,7 +1982,15 @@
       slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
       updateGalleryCounterInDoc(gallery);
       const wrap = gallery.closest('.photo-gallery-wrap');
-      if (wrap) fitGalleryInBox(wrap);
+      if (wrap) scheduleFitGalleryInBox(wrap);
+    }
+
+    const fitGalleryTimers = new WeakMap();
+
+    function scheduleFitGalleryInBox(wrap) {
+      if (!wrap) return;
+      clearTimeout(fitGalleryTimers.get(wrap));
+      fitGalleryTimers.set(wrap, setTimeout(() => fitGalleryInBox(wrap), 80));
     }
 
     function setupGalleryNavigation(doc) {
@@ -2013,7 +2033,7 @@
     function selectElement(el) {
       const doc = previewFrame.contentDocument;
       if (!doc || !el) return;
-      cleanEditorArtifacts(doc);
+      clearSelectionState(doc);
       selectedElement = el;
       el.classList.add('editor-selected');
       el.setAttribute('data-editor-resizable', '');
@@ -2324,7 +2344,7 @@
       applyResizeStyles(selectedElement, percent, fullWidth);
       document.getElementById('resizeValue').textContent = fullWidth ? '100' : percent;
       document.getElementById('resizeSlider').value = fullWidth ? 100 : percent;
-      syncFromPreview();
+      syncFromPreview({ debounce: true });
       selectedElement.classList.add('editor-selected');
       setDirty(true);
     }
@@ -2602,8 +2622,8 @@
       });
 
       doc.addEventListener('input', () => {
-        syncFromPreview();
         setDirty(true);
+        syncFromPreview({ debounce: true });
         clearTimeout(inputUndoTimer);
         inputUndoTimer = setTimeout(() => commitUndoSnapshot(), 600);
       });
@@ -2902,19 +2922,53 @@
       codeEditor.classList.add('visible');
     }
 
-    function syncFromPreview() {
-      const doc = previewFrame.contentDocument;
-      if (!doc) return;
-      cleanEditorArtifacts(doc);
-      const bodyHtml = doc.body.innerHTML;
+    let syncPreviewTimer = null;
+
+    function writePreviewBodyToEditor(bodyHtml) {
       codeEditor.value = codeEditor.value.replace(
         /(<body[^>]*>)[\s\S]*?(<\/body>)/i,
         '$1' + bodyHtml + '$2'
       );
     }
 
+    function flushPreviewSync() {
+      if (!syncPreviewTimer) return;
+      clearTimeout(syncPreviewTimer);
+      syncPreviewTimer = null;
+      const doc = previewFrame.contentDocument;
+      if (!doc?.body) return;
+      writePreviewBodyToEditor(doc.body.innerHTML);
+    }
+
+    function syncFromPreview(options = {}) {
+      const clean = options.clean === true;
+      const debounce = options.debounce === true;
+
+      const run = () => {
+        syncPreviewTimer = null;
+        const doc = previewFrame.contentDocument;
+        if (!doc?.body) return;
+        if (clean) cleanEditorArtifacts(doc);
+        writePreviewBodyToEditor(doc.body.innerHTML);
+        if (clean) {
+          protectGalleriesFromEditing(doc);
+          addGalleryDragHandles(doc);
+        }
+      };
+
+      if (debounce) {
+        clearTimeout(syncPreviewTimer);
+        syncPreviewTimer = setTimeout(run, 300);
+        return;
+      }
+
+      clearTimeout(syncPreviewTimer);
+      run();
+    }
+
     async function saveFile() {
-      if (isCodeMode === false) syncFromPreview();
+      flushPreviewSync();
+      if (isCodeMode === false) syncFromPreview({ clean: true });
       const res = await fetch('/api/file', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },

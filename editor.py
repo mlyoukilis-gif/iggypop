@@ -383,6 +383,13 @@ def build_upload_package():
     return upload_dir
 
 
+def _safe_build_upload_package():
+    try:
+        build_upload_package()
+    except Exception:
+        pass
+
+
 def ftp_go_web_root(ftp, preferred='public_html'):
     try:
         home = ftp.pwd()
@@ -650,10 +657,7 @@ class EditorHandler(http.server.SimpleHTTPRequestHandler):
                 safe_path = resolve_site_path(file_path)
                 safe_path.write_text(content, encoding='utf-8')
                 if file_path == DEFAULT_FILE:
-                    try:
-                        build_upload_package()
-                    except Exception:
-                        pass
+                    threading.Thread(target=_safe_build_upload_package, daemon=True).start()
                 return send_json(self, 200, {'ok': True})
             except ValueError as e:
                 return send_json(self, 400, {'error': str(e)})
