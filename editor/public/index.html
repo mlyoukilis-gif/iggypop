@@ -1,0 +1,1130 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>IggyPop Site Editor</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      
+      body { 
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+        display: flex; 
+        height: 100vh; 
+        background: #f5f5f5;
+      }
+      
+      #sidebar { 
+        width: 280px; 
+        border-right: 1px solid #ddd; 
+        padding: 16px; 
+        overflow:auto;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      }
+      
+      #main { 
+        flex: 1; 
+        display: flex; 
+        flex-direction: column; 
+        background: #f9f9f9;
+      }
+      
+      .toolbar { 
+        padding: 12px 16px; 
+        border-bottom: 1px solid #ddd; 
+        display: flex; 
+        gap: 12px; 
+        align-items: center;
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+      
+      .toolbar button {
+        padding: 8px 16px;
+        background: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: background 0.2s;
+      }
+      
+      .toolbar button:hover { background: #45a049; }
+      .toolbar button.secondary { background: #2196F3; }
+      .toolbar button.secondary:hover { background: #0b7dda; }
+      
+      #documentArea {
+        flex: 1;
+        overflow-y: auto;
+        padding: 40px;
+        background: #fff;
+        margin: 16px;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        max-width: 900px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      
+      .content-block {
+        margin-bottom: 16px;
+        padding: 12px;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        transition: all 0.2s;
+      }
+      
+      .content-block:hover {
+        border-color: #2196F3;
+        background: #f0f8ff;
+      }
+      
+      .content-block.text-block {
+        min-height: 24px;
+      }
+      
+      .content-block.text-block[contenteditable] {
+        outline: none;
+        cursor: text;
+      }
+      
+      .content-block.image-block {
+        text-align: center;
+        border: 2px dashed #ccc;
+        padding: 20px;
+        min-height: 120px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      }
+      
+      .content-block.image-block img {
+        max-width: 100%;
+        height: auto;
+        max-height: 300px;
+        border-radius: 6px;
+      }
+      
+      .content-block.image-block.has-image {
+        border: 1px solid #ccc;
+        padding: 12px;
+      }
+      
+      .remove-btn {
+        float: right;
+        background: #f44336;
+        color: white;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        opacity: 0;
+        transition: opacity 0.2s;
+      }
+      
+      .content-block:hover .remove-btn {
+        opacity: 1;
+      }
+      
+      .remove-btn:hover {
+        background: #da190b;
+      }
+      
+      #imageGallery { 
+        display: grid; 
+        grid-template-columns: repeat(2, 1fr); 
+        gap: 8px; 
+        margin: 12px 0; 
+      }
+      
+      .image-thumb { 
+        position: relative; 
+        border-radius: 6px; 
+        overflow: hidden; 
+        background: #f5f5f5; 
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: border 0.2s;
+      }
+      
+      .image-thumb:hover {
+        border-color: #4CAF50;
+      }
+      
+      .image-thumb img { 
+        width: 100%; 
+        height: 80px; 
+        object-fit: cover; 
+      }
+      
+      .upload-zone { 
+        border: 2px dashed #4CAF50; 
+        border-radius: 8px; 
+        padding: 16px; 
+        text-align: center; 
+        margin: 16px 0; 
+        cursor: pointer; 
+        transition: all 0.3s; 
+      }
+      
+      .upload-zone:hover { 
+        background: #f0fff0; 
+        border-color: #2e7d32; 
+      }
+      
+      .upload-zone.drag-over { 
+        background: #c8e6c9; 
+        border-color: #2e7d32; 
+      }
+      
+      .upload-zone input { display: none; }
+      .upload-zone p { margin: 0; color: #666; font-size: 14px; }
+      
+      .section { margin-bottom: 20px; }
+      .section h4 { margin: 8px 0 4px 0; font-size: 12px; text-transform: uppercase; color: #666; font-weight: 600; }
+      
+      .sidebar-button {
+        width: 100%;
+        padding: 8px;
+        background: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 500;
+        margin-bottom: 8px;
+        transition: background 0.2s;
+      }
+      
+      .sidebar-button:hover {
+        background: #45a049;
+      }
+      
+      h1, h2, h3 { margin: 0 0 8px 0; }
+      
+      /* Rich text toolbar */
+      .text-toolbar {
+        display: none;
+        position: fixed;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1000;
+        gap: 4px;
+      }
+      
+      .text-toolbar.visible {
+        display: flex;
+        flex-wrap: wrap;
+        max-width: 500px;
+      }
+      
+      .toolbar-btn {
+        padding: 4px 8px;
+        background: #f0f0f0;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.2s;
+      }
+      
+      .toolbar-btn:hover {
+        background: #e0e0e0;
+      }
+      
+      .toolbar-btn.active {
+        background: #2196F3;
+        color: white;
+        border-color: #2196F3;
+      }
+      
+      select.toolbar-select {
+        padding: 4px 6px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 12px;
+        background: white;
+        cursor: pointer;
+      }
+      
+      .toolbar-divider {
+        width: 1px;
+        background: #ddd;
+        margin: 0 2px;
+      }
+      
+      /* Styled boxes */
+      .content-block.box-highlight {
+        background: #fffbea;
+        border: 2px solid #ffc107 !important;
+        border-radius: 8px;
+      }
+      
+      .content-block.box-info {
+        background: #e3f2fd;
+        border: 2px solid #2196F3 !important;
+        border-radius: 8px;
+      }
+      
+      .content-block.box-success {
+        background: #e8f5e9;
+        border: 2px solid #4CAF50 !important;
+        border-radius: 8px;
+      }
+      
+      .content-block.box-warning {
+        background: #fff3e0;
+        border: 2px solid #ff9800 !important;
+        border-radius: 8px;
+      }
+      
+      .content-block.box-danger {
+        background: #ffebee;
+        border: 2px solid #f44336 !important;
+        border-radius: 8px;
+      }
+      
+      .content-block.box-neutral {
+        background: #f5f5f5;
+        border: 2px solid #999 !important;
+        border-radius: 8px;
+      }
+      
+      .image-caption {
+        font-size: 12px;
+        color: #666;
+        margin-top: 8px;
+        text-align: center;
+        font-style: italic;
+      }
+      
+      .box-buttons {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+      }
+      
+      .box-btn {
+        padding: 6px 10px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 11px;
+        transition: all 0.2s;
+      }
+      
+      .box-btn:hover {
+        background: #f0f0f0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="sidebar">
+      <h3 style="margin-bottom: 16px;">📝 IggyPop Editor</h3>
+      
+      <div class="section">
+        <h4>✏️ Add Content</h4>
+        <button class="sidebar-button" onclick="addTextBlock()">+ Text</button>
+        <button class="sidebar-button" onclick="addImageBlock()" style="background: #2196F3;">+ Image</button>
+      </div>
+      
+      <div class="section">
+        <h4>📦 Styled Boxes</h4>
+        <div class="box-buttons">
+          <button class="box-btn" onclick="addBoxBlock('highlight')" style="background: #fffbea; border-color: #ffc107;">📌 Note</button>
+          <button class="box-btn" onclick="addBoxBlock('info')" style="background: #e3f2fd; border-color: #2196F3;">ℹ️ Info</button>
+          <button class="box-btn" onclick="addBoxBlock('success')" style="background: #e8f5e9; border-color: #4CAF50;">✓ Success</button>
+        </div>
+        <div class="box-buttons">
+          <button class="box-btn" onclick="addBoxBlock('warning')" style="background: #fff3e0; border-color: #ff9800;">⚠️ Warning</button>
+          <button class="box-btn" onclick="addBoxBlock('danger')" style="background: #ffebee; border-color: #f44336;">✕ Alert</button>
+          <button class="box-btn" onclick="addBoxBlock('neutral')" style="background: #f5f5f5; border-color: #999;">⎔ Box</button>
+        </div>
+      </div>
+      
+      <div class="section">
+        <h4>🖼️ Image Library</h4>
+        <div class="upload-zone" id="uploadZone">
+          <p>📤 Drop images</p>
+          <input type="file" id="imageInput" accept="image/*,.heic,.heif" multiple />
+        </div>
+        <div id="imageGallery"></div>
+      </div>
+      
+      <div class="section">
+        <h4>💾 Save</h4>
+        <button class="sidebar-button" onclick="saveDocument()" style="background: #FF9800;">Save as HTML</button>
+      </div>
+    </div>
+
+    <div id="main">
+      <div class="toolbar">
+        <h2 style="margin: 0; flex: 1; color: #333;">📄 Iggypop2.html Editor</h2>
+        <button onclick="previewDocument()" class="secondary">👁️ Preview</button>
+      </div>
+      
+      <!-- Rich text toolbar -->
+      <div id="textToolbar" class="text-toolbar">
+        <select class="toolbar-select" onchange="changeFontFamily(this.value)">
+          <option value="">Font</option>
+          <option value="Arial, sans-serif">Arial</option>
+          <option value="Georgia, serif">Georgia</option>
+          <option value="'Courier New', monospace">Courier</option>
+          <option value="'Comic Sans MS', cursive">Comic Sans</option>
+          <option value="Impact, sans-serif">Impact</option>
+          <option value="'Trebuchet MS', sans-serif">Trebuchet</option>
+          <option value="Verdana, sans-serif">Verdana</option>
+        </select>
+        
+        <select class="toolbar-select" onchange="changeFontSize(this.value)">
+          <option value="">Size</option>
+          <option value="12px">12px</option>
+          <option value="14px">14px</option>
+          <option value="16px">16px</option>
+          <option value="18px">18px</option>
+          <option value="20px">20px</option>
+          <option value="24px">24px</option>
+          <option value="28px">28px</option>
+          <option value="32px">32px</option>
+        </select>
+        
+        <div class="toolbar-divider"></div>
+        
+        <button class="toolbar-btn" title="Bold" onclick="toggleBold()"><b>B</b></button>
+        <button class="toolbar-btn" title="Italic" onclick="toggleItalic()"><i>I</i></button>
+        <button class="toolbar-btn" title="Underline" onclick="toggleUnderline()"><u>U</u></button>
+        
+        <div class="toolbar-divider"></div>
+        
+        <input type="color" id="textColorPicker" class="toolbar-select" style="width: 40px; height: 28px; cursor: pointer;" title="Text Color" onchange="changeTextColor(this.value)">
+        
+        <div class="toolbar-divider"></div>
+        
+        <button class="toolbar-btn" onclick="formatHeading('h1')">H1</button>
+        <button class="toolbar-btn" onclick="formatHeading('h2')">H2</button>
+        <button class="toolbar-btn" onclick="formatHeading('h3')">H3</button>
+      </div>
+      
+      <div id="documentArea"></div>
+    </div>
+
+    <script>
+      const uploadZone = document.getElementById('uploadZone');
+      const imageInput = document.getElementById('imageInput');
+      const imageGallery = document.getElementById('imageGallery');
+      const documentArea = document.getElementById('documentArea');
+      const textToolbar = document.getElementById('textToolbar');
+      let uploadedImages = [];
+      let currentEditingBlock = null;
+      const TARGET_FILE = 'Iggypop2.html';
+
+      // Text toolbar functions
+      function showToolbar(block) {
+        currentEditingBlock = block;
+        const rect = block.getBoundingClientRect();
+        textToolbar.style.top = (rect.top - 50) + 'px';
+        textToolbar.style.left = (rect.left + 10) + 'px';
+        textToolbar.classList.add('visible');
+      }
+
+      function hideToolbar() {
+        textToolbar.classList.remove('visible');
+      }
+
+      function changeFontFamily(font) {
+        if (currentEditingBlock && font) {
+          currentEditingBlock.style.fontFamily = font;
+        }
+      }
+
+      function changeFontSize(size) {
+        if (currentEditingBlock && size) {
+          currentEditingBlock.style.fontSize = size;
+        }
+      }
+
+      function toggleBold() {
+        if (currentEditingBlock) {
+          if (currentEditingBlock.style.fontWeight === 'bold') {
+            currentEditingBlock.style.fontWeight = 'normal';
+          } else {
+            currentEditingBlock.style.fontWeight = 'bold';
+          }
+        }
+      }
+
+      function toggleItalic() {
+        if (currentEditingBlock) {
+          if (currentEditingBlock.style.fontStyle === 'italic') {
+            currentEditingBlock.style.fontStyle = 'normal';
+          } else {
+            currentEditingBlock.style.fontStyle = 'italic';
+          }
+        }
+      }
+
+      function toggleUnderline() {
+        if (currentEditingBlock) {
+          if (currentEditingBlock.style.textDecoration === 'underline') {
+            currentEditingBlock.style.textDecoration = 'none';
+          } else {
+            currentEditingBlock.style.textDecoration = 'underline';
+          }
+        }
+      }
+
+      function changeTextColor(color) {
+        if (currentEditingBlock) {
+          currentEditingBlock.style.color = color;
+        }
+      }
+
+      function formatHeading(level) {
+        if (currentEditingBlock) {
+          switch(level) {
+            case 'h1':
+              currentEditingBlock.style.fontSize = '32px';
+              currentEditingBlock.style.fontWeight = 'bold';
+              break;
+            case 'h2':
+              currentEditingBlock.style.fontSize = '24px';
+              currentEditingBlock.style.fontWeight = 'bold';
+              break;
+            case 'h3':
+              currentEditingBlock.style.fontSize = '20px';
+              currentEditingBlock.style.fontWeight = 'bold';
+              break;
+          }
+        }
+      }
+
+      // Upload zone drag-and-drop
+      uploadZone.addEventListener('click', () => imageInput.click());
+      uploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadZone.classList.add('drag-over');
+      });
+      uploadZone.addEventListener('dragleave', () => {
+        uploadZone.classList.remove('drag-over');
+      });
+      uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadZone.classList.remove('drag-over');
+        handleImageUpload(e.dataTransfer.files);
+      });
+      imageInput.addEventListener('change', (e) => {
+        handleImageUpload(e.target.files);
+      });
+
+      async function handleImageUpload(files) {
+        for (const file of files) {
+          const fd = new FormData();
+          fd.append('file', file);
+          const res = await fetch('/api/upload', { method: 'POST', body: fd });
+          if (res.ok) {
+            const data = await res.json();
+            uploadedImages.push(data.filename);
+          }
+        }
+        imageInput.value = '';
+        refreshImageGallery();
+      }
+
+      function refreshImageGallery() {
+        imageGallery.innerHTML = '';
+        uploadedImages.forEach(img => {
+          const thumb = document.createElement('div');
+          thumb.className = 'image-thumb';
+          thumb.title = img;
+          const imgEl = document.createElement('img');
+          imgEl.src = '/' + img;
+          thumb.appendChild(imgEl);
+          thumb.addEventListener('click', () => insertImageIntoDocument(img));
+          imageGallery.appendChild(thumb);
+        });
+      }
+
+      function addTextBlock() {
+        const block = document.createElement('div');
+        block.className = 'content-block text-block';
+        block.contentEditable = true;
+        block.innerHTML = 'Click to type...';
+        block.style.minHeight = '24px';
+        
+        block.addEventListener('focus', function() {
+          if (this.textContent === 'Click to type...') {
+            this.textContent = '';
+          }
+          showToolbar(this);
+        });
+        
+        block.addEventListener('blur', function() {
+          if (this.textContent.trim() === '') {
+            this.innerHTML = 'Click to type...';
+          }
+          hideToolbar();
+        });
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-btn';
+        removeBtn.textContent = '✕ Remove';
+        removeBtn.type = 'button';
+        removeBtn.onclick = (e) => {
+          e.preventDefault();
+          block.remove();
+          hideToolbar();
+        };
+        block.appendChild(removeBtn);
+        
+        documentArea.appendChild(block);
+        block.focus();
+      }
+
+      function addImageBlock() {
+        const block = document.createElement('div');
+        block.className = 'content-block image-block';
+        block.innerHTML = '<p style="color: #999;">Click to select image</p>';
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-btn';
+        removeBtn.textContent = '✕ Remove';
+        removeBtn.type = 'button';
+        removeBtn.onclick = (e) => {
+          e.preventDefault();
+          block.remove();
+        };
+        block.appendChild(removeBtn);
+        
+        block.addEventListener('click', (e) => {
+          if (e.target === removeBtn) return;
+          insertImageIntoDocument(null, block);
+        });
+        
+        documentArea.appendChild(block);
+      }
+
+      function addBoxBlock(boxType) {
+        const block = document.createElement('div');
+        block.className = 'content-block text-block box-' + boxType;
+        block.contentEditable = true;
+        block.innerHTML = 'Click to add content...';
+        block.style.padding = '16px';
+        block.style.minHeight = '40px';
+        
+        block.addEventListener('focus', function() {
+          if (this.textContent === 'Click to add content...') {
+            this.textContent = '';
+          }
+          showToolbar(this);
+        });
+        
+        block.addEventListener('blur', function() {
+          if (this.textContent.trim() === '') {
+            this.innerHTML = 'Click to add content...';
+          }
+          hideToolbar();
+        });
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-btn';
+        removeBtn.textContent = '✕ Remove';
+        removeBtn.type = 'button';
+        removeBtn.onclick = (e) => {
+          e.preventDefault();
+          block.remove();
+          hideToolbar();
+        };
+        block.appendChild(removeBtn);
+        
+        documentArea.appendChild(block);
+        block.focus();
+      }
+
+      function insertImageIntoDocument(imageName, imageBlock) {
+        if (!imageBlock) {
+          imageBlock = document.createElement('div');
+          imageBlock.className = 'content-block image-block has-image';
+          documentArea.appendChild(imageBlock);
+        }
+        
+        if (imageName) {
+          imageBlock.innerHTML = `<img src="/${imageName}" alt="Document image"><div class="image-caption" contenteditable="true">Click to add caption...</div>`;
+          imageBlock.classList.add('has-image');
+          
+          const removeBtn = document.createElement('button');
+          removeBtn.className = 'remove-btn';
+          removeBtn.textContent = '✕ Remove';
+          removeBtn.type = 'button';
+          removeBtn.onclick = (e) => {
+            e.preventDefault();
+            imageBlock.remove();
+          };
+          imageBlock.appendChild(removeBtn);
+        }
+      }
+
+      // Load Iggypop2.html and extract editable sections
+      async function loadIggypop2() {
+        try {
+          const res = await fetch('/api/file?path=' + encodeURIComponent(TARGET_FILE));
+          if (!res.ok) throw new Error('Could not load file');
+          const data = await res.json();
+          
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(data.content, 'text/html');
+          
+          const content = doc.querySelector('.content');
+          documentArea.innerHTML = '';
+          
+          if (content) {
+            // Load all child elements (h2, h3, p, div boxes, img)
+            content.querySelectorAll('h2, h3, p, div.box-highlight, div.box-info, div.box-success, div.box-warning, div.box-danger, div.box-neutral, img').forEach(elem => {
+              if (elem.tagName === 'H2' || elem.tagName === 'H3') {
+                // Heading
+                const titleBlock = document.createElement('div');
+                titleBlock.className = 'content-block text-block';
+                titleBlock.contentEditable = true;
+                titleBlock.textContent = elem.textContent;
+                
+                // Copy inline styles
+                if (elem.style.length > 0) {
+                  for (let i = 0; i < elem.style.length; i++) {
+                    const prop = elem.style[i];
+                    titleBlock.style[prop] = elem.style.getPropertyValue(prop);
+                  }
+                }
+                
+                // Default heading styles if no custom style
+                if (!titleBlock.style.fontSize) {
+                  titleBlock.style.fontSize = elem.tagName === 'H2' ? '24px' : '20px';
+                }
+                if (!titleBlock.style.fontWeight) {
+                  titleBlock.style.fontWeight = 'bold';
+                }
+                
+                titleBlock.addEventListener('focus', function() { showToolbar(this); });
+                titleBlock.addEventListener('blur', function() { hideToolbar(); });
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-btn';
+                removeBtn.textContent = '✕ Remove';
+                removeBtn.type = 'button';
+                removeBtn.onclick = (e) => { e.preventDefault(); titleBlock.remove(); hideToolbar(); };
+                titleBlock.appendChild(removeBtn);
+                
+                documentArea.appendChild(titleBlock);
+              } else if (elem.tagName === 'P') {
+                // Regular paragraph
+                const textBlock = document.createElement('div');
+                textBlock.className = 'content-block text-block';
+                textBlock.contentEditable = true;
+                textBlock.textContent = elem.textContent;
+                
+                // Copy inline styles
+                if (elem.style.length > 0) {
+                  for (let i = 0; i < elem.style.length; i++) {
+                    const prop = elem.style[i];
+                    textBlock.style[prop] = elem.style.getPropertyValue(prop);
+                  }
+                }
+                
+                textBlock.addEventListener('focus', function() { showToolbar(this); });
+                textBlock.addEventListener('blur', function() { hideToolbar(); });
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-btn';
+                removeBtn.textContent = '✕ Remove';
+                removeBtn.type = 'button';
+                removeBtn.onclick = (e) => { e.preventDefault(); textBlock.remove(); hideToolbar(); };
+                textBlock.appendChild(removeBtn);
+                
+                documentArea.appendChild(textBlock);
+              } else if (elem.tagName === 'DIV' && elem.classList.contains('box-highlight')) {
+                const boxBlock = document.createElement('div');
+                boxBlock.className = 'content-block text-block box-highlight';
+                boxBlock.contentEditable = true;
+                boxBlock.style.padding = '16px';
+                boxBlock.style.minHeight = '40px';
+                boxBlock.textContent = elem.textContent;
+                
+                if (elem.style.length > 0) {
+                  for (let i = 0; i < elem.style.length; i++) {
+                    const prop = elem.style[i];
+                    if (prop !== 'padding' && prop !== 'min-height' && prop !== 'border' && prop !== 'background') {
+                      boxBlock.style[prop] = elem.style.getPropertyValue(prop);
+                    }
+                  }
+                }
+                
+                boxBlock.addEventListener('focus', function() { showToolbar(this); });
+                boxBlock.addEventListener('blur', function() { hideToolbar(); });
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-btn';
+                removeBtn.textContent = '✕ Remove';
+                removeBtn.type = 'button';
+                removeBtn.onclick = (e) => { e.preventDefault(); boxBlock.remove(); hideToolbar(); };
+                boxBlock.appendChild(removeBtn);
+                
+                documentArea.appendChild(boxBlock);
+              } else if (elem.tagName === 'DIV' && elem.classList.contains('box-info')) {
+                const boxBlock = document.createElement('div');
+                boxBlock.className = 'content-block text-block box-info';
+                boxBlock.contentEditable = true;
+                boxBlock.style.padding = '16px';
+                boxBlock.style.minHeight = '40px';
+                boxBlock.textContent = elem.textContent;
+                
+                if (elem.style.length > 0) {
+                  for (let i = 0; i < elem.style.length; i++) {
+                    const prop = elem.style[i];
+                    if (prop !== 'padding' && prop !== 'min-height' && prop !== 'border' && prop !== 'background') {
+                      boxBlock.style[prop] = elem.style.getPropertyValue(prop);
+                    }
+                  }
+                }
+                
+                boxBlock.addEventListener('focus', function() { showToolbar(this); });
+                boxBlock.addEventListener('blur', function() { hideToolbar(); });
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-btn';
+                removeBtn.textContent = '✕ Remove';
+                removeBtn.type = 'button';
+                removeBtn.onclick = (e) => { e.preventDefault(); boxBlock.remove(); hideToolbar(); };
+                boxBlock.appendChild(removeBtn);
+                
+                documentArea.appendChild(boxBlock);
+              } else if (elem.tagName === 'DIV' && elem.classList.contains('box-success')) {
+                const boxBlock = document.createElement('div');
+                boxBlock.className = 'content-block text-block box-success';
+                boxBlock.contentEditable = true;
+                boxBlock.style.padding = '16px';
+                boxBlock.style.minHeight = '40px';
+                boxBlock.textContent = elem.textContent;
+                
+                if (elem.style.length > 0) {
+                  for (let i = 0; i < elem.style.length; i++) {
+                    const prop = elem.style[i];
+                    if (prop !== 'padding' && prop !== 'min-height' && prop !== 'border' && prop !== 'background') {
+                      boxBlock.style[prop] = elem.style.getPropertyValue(prop);
+                    }
+                  }
+                }
+                
+                boxBlock.addEventListener('focus', function() { showToolbar(this); });
+                boxBlock.addEventListener('blur', function() { hideToolbar(); });
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-btn';
+                removeBtn.textContent = '✕ Remove';
+                removeBtn.type = 'button';
+                removeBtn.onclick = (e) => { e.preventDefault(); boxBlock.remove(); hideToolbar(); };
+                boxBlock.appendChild(removeBtn);
+                
+                documentArea.appendChild(boxBlock);
+              } else if (elem.tagName === 'DIV' && elem.classList.contains('box-warning')) {
+                const boxBlock = document.createElement('div');
+                boxBlock.className = 'content-block text-block box-warning';
+                boxBlock.contentEditable = true;
+                boxBlock.style.padding = '16px';
+                boxBlock.style.minHeight = '40px';
+                boxBlock.textContent = elem.textContent;
+                
+                if (elem.style.length > 0) {
+                  for (let i = 0; i < elem.style.length; i++) {
+                    const prop = elem.style[i];
+                    if (prop !== 'padding' && prop !== 'min-height' && prop !== 'border' && prop !== 'background') {
+                      boxBlock.style[prop] = elem.style.getPropertyValue(prop);
+                    }
+                  }
+                }
+                
+                boxBlock.addEventListener('focus', function() { showToolbar(this); });
+                boxBlock.addEventListener('blur', function() { hideToolbar(); });
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-btn';
+                removeBtn.textContent = '✕ Remove';
+                removeBtn.type = 'button';
+                removeBtn.onclick = (e) => { e.preventDefault(); boxBlock.remove(); hideToolbar(); };
+                boxBlock.appendChild(removeBtn);
+                
+                documentArea.appendChild(boxBlock);
+              } else if (elem.tagName === 'DIV' && elem.classList.contains('box-danger')) {
+                const boxBlock = document.createElement('div');
+                boxBlock.className = 'content-block text-block box-danger';
+                boxBlock.contentEditable = true;
+                boxBlock.style.padding = '16px';
+                boxBlock.style.minHeight = '40px';
+                boxBlock.textContent = elem.textContent;
+                
+                if (elem.style.length > 0) {
+                  for (let i = 0; i < elem.style.length; i++) {
+                    const prop = elem.style[i];
+                    if (prop !== 'padding' && prop !== 'min-height' && prop !== 'border' && prop !== 'background') {
+                      boxBlock.style[prop] = elem.style.getPropertyValue(prop);
+                    }
+                  }
+                }
+                
+                boxBlock.addEventListener('focus', function() { showToolbar(this); });
+                boxBlock.addEventListener('blur', function() { hideToolbar(); });
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-btn';
+                removeBtn.textContent = '✕ Remove';
+                removeBtn.type = 'button';
+                removeBtn.onclick = (e) => { e.preventDefault(); boxBlock.remove(); hideToolbar(); };
+                boxBlock.appendChild(removeBtn);
+                
+                documentArea.appendChild(boxBlock);
+              } else if (elem.tagName === 'DIV' && elem.classList.contains('box-neutral')) {
+                const boxBlock = document.createElement('div');
+                boxBlock.className = 'content-block text-block box-neutral';
+                boxBlock.contentEditable = true;
+                boxBlock.style.padding = '16px';
+                boxBlock.style.minHeight = '40px';
+                boxBlock.textContent = elem.textContent;
+                
+                if (elem.style.length > 0) {
+                  for (let i = 0; i < elem.style.length; i++) {
+                    const prop = elem.style[i];
+                    if (prop !== 'padding' && prop !== 'min-height' && prop !== 'border' && prop !== 'background') {
+                      boxBlock.style[prop] = elem.style.getPropertyValue(prop);
+                    }
+                  }
+                }
+                
+                boxBlock.addEventListener('focus', function() { showToolbar(this); });
+                boxBlock.addEventListener('blur', function() { hideToolbar(); });
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-btn';
+                removeBtn.textContent = '✕ Remove';
+                removeBtn.type = 'button';
+                removeBtn.onclick = (e) => { e.preventDefault(); boxBlock.remove(); hideToolbar(); };
+                boxBlock.appendChild(removeBtn);
+                
+                documentArea.appendChild(boxBlock);
+              } else if (elem.tagName === 'IMG') {
+                // Image
+                const imgBlock = document.createElement('div');
+                imgBlock.className = 'content-block image-block has-image';
+                imgBlock.innerHTML = `<img src="${elem.src}" alt="Image">`;
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-btn';
+                removeBtn.textContent = '✕ Remove';
+                removeBtn.type = 'button';
+                removeBtn.onclick = (e) => { e.preventDefault(); imgBlock.remove(); };
+                imgBlock.appendChild(removeBtn);
+                
+                documentArea.appendChild(imgBlock);
+              }
+            });
+          }
+        } catch (err) {
+          console.error('Error loading file:', err);
+          documentArea.innerHTML = '<p style="color: red;">Error loading Iggypop2.html</p>';
+        }
+      }
+
+      async function saveDocument() {
+        const blocks = documentArea.querySelectorAll('.content-block');
+        
+        // Build the new content
+        let contentHtml = '';
+        blocks.forEach(block => {
+          if (block.classList.contains('text-block')) {
+            const text = block.textContent.replace('✕ Remove', '').trim();
+            if (text && text !== 'Click to type...' && text !== 'Click to add content...') {
+              const isBold = block.style.fontWeight === 'bold';
+              const fontSize = block.style.fontSize;
+              const fontFamily = block.style.fontFamily;
+              
+              let style = '';
+              if (isBold && fontSize !== '32px') style += `font-weight: bold;`;
+              if (fontSize) style += `font-size: ${fontSize};`;
+              if (fontFamily) style += `font-family: ${fontFamily};`;
+              if (block.style.color) style += `color: ${block.style.color};`;
+              if (block.style.fontStyle === 'italic') style += `font-style: italic;`;
+              if (block.style.textDecoration === 'underline') style += `text-decoration: underline;`;
+              
+              const styleAttr = style ? ` style="${style}"` : '';
+              
+              if (block.classList.contains('box-highlight')) {
+                contentHtml += `      <div class="box-highlight"${styleAttr}>${text}</div>\n`;
+              } else if (block.classList.contains('box-info')) {
+                contentHtml += `      <div class="box-info"${styleAttr}>${text}</div>\n`;
+              } else if (block.classList.contains('box-success')) {
+                contentHtml += `      <div class="box-success"${styleAttr}>${text}</div>\n`;
+              } else if (block.classList.contains('box-warning')) {
+                contentHtml += `      <div class="box-warning"${styleAttr}>${text}</div>\n`;
+              } else if (block.classList.contains('box-danger')) {
+                contentHtml += `      <div class="box-danger"${styleAttr}>${text}</div>\n`;
+              } else if (block.classList.contains('box-neutral')) {
+                contentHtml += `      <div class="box-neutral"${styleAttr}>${text}</div>\n`;
+              } else if (isBold || fontSize === '32px') {
+                contentHtml += `      <h2${styleAttr}>${text}</h2>\n`;
+              } else if (fontSize === '24px' || fontSize === '20px') {
+                contentHtml += `      <h3${styleAttr}>${text}</h3>\n`;
+              } else {
+                contentHtml += `      <p${styleAttr}>${text}</p>\n`;
+              }
+            }
+          } else if (block.classList.contains('image-block')) {
+            const img = block.querySelector('img');
+            if (img) {
+              const src = img.src.startsWith('/') ? img.src.substring(1) : img.src;
+              const caption = block.querySelector('.image-caption');
+              const captionText = caption ? caption.textContent.replace('Click to add caption...', '').trim() : '';
+              contentHtml += `      <img src="${src}" alt="IggyPop image">\n`;
+              if (captionText) {
+                contentHtml += `      <p class="image-caption">${captionText}</p>\n`;
+              }
+            }
+          }
+        });
+        
+        try {
+          // Send to server with a flag to preserve styling
+          const saveRes = await fetch('/api/file', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              path: TARGET_FILE, 
+              content: contentHtml,
+              preserveStyle: true 
+            })
+          });
+          
+          if (saveRes.ok) {
+            alert('✓ Saved to Iggypop2.html\n(Original styling preserved!)');
+          } else {
+            alert('Save failed: ' + saveRes.statusText);
+          }
+        } catch (err) {
+          console.error('Save error:', err);
+          alert('Error saving file: ' + err.message);
+        }
+      }
+
+      function previewDocument() {
+        const blocks = documentArea.querySelectorAll('.content-block');
+        let html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IggyPop Kennel Preview</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #fff1f8, #e8f7ff); }
+    .container { max-width: 900px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    p { line-height: 1.8; color: #4b5563; margin: 16px 0; }
+    img { max-width: 100%; height: auto; border-radius: 6px; margin: 20px 0; }
+    h1, h2, h3 { color: #ff5cab; margin: 24px 0 12px 0; }
+    .box-highlight { background: #fffbea; border: 2px solid #ffc107; padding: 16px; border-radius: 8px; margin: 16px 0; }
+    .box-info { background: #e3f2fd; border: 2px solid #2196F3; padding: 16px; border-radius: 8px; margin: 16px 0; }
+    .box-success { background: #e8f5e9; border: 2px solid #4CAF50; padding: 16px; border-radius: 8px; margin: 16px 0; }
+    .box-warning { background: #fff3e0; border: 2px solid #ff9800; padding: 16px; border-radius: 8px; margin: 16px 0; }
+    .box-danger { background: #ffebee; border: 2px solid #f44336; padding: 16px; border-radius: 8px; margin: 16px 0; }
+    .box-neutral { background: #f5f5f5; border: 2px solid #999; padding: 16px; border-radius: 8px; margin: 16px 0; }
+    .image-caption { font-size: 12px; color: #999; font-style: italic; text-align: center; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+`;
+
+        blocks.forEach(block => {
+          if (block.classList.contains('text-block')) {
+            const text = block.textContent.replace('✕ Remove', '').trim();
+            if (text && text !== 'Click to type...' && text !== 'Click to add content...') {
+              const isBold = block.style.fontWeight === 'bold';
+              const fontSize = block.style.fontSize;
+              const fontFamily = block.style.fontFamily;
+              
+              let style = '';
+              if (isBold && fontSize !== '32px') style += `font-weight: bold;`;
+              if (fontSize) style += `font-size: ${fontSize};`;
+              if (fontFamily) style += `font-family: ${fontFamily};`;
+              if (block.style.color) style += `color: ${block.style.color};`;
+              if (block.style.fontStyle === 'italic') style += `font-style: italic;`;
+              if (block.style.textDecoration === 'underline') style += `text-decoration: underline;`;
+              
+              const styleAttr = style ? ` style="${style}"` : '';
+              
+              if (block.classList.contains('box-highlight')) {
+                html += `    <div class="box-highlight"${styleAttr}>${text}</div>\n`;
+              } else if (block.classList.contains('box-info')) {
+                html += `    <div class="box-info"${styleAttr}>${text}</div>\n`;
+              } else if (block.classList.contains('box-success')) {
+                html += `    <div class="box-success"${styleAttr}>${text}</div>\n`;
+              } else if (block.classList.contains('box-warning')) {
+                html += `    <div class="box-warning"${styleAttr}>${text}</div>\n`;
+              } else if (block.classList.contains('box-danger')) {
+                html += `    <div class="box-danger"${styleAttr}>${text}</div>\n`;
+              } else if (block.classList.contains('box-neutral')) {
+                html += `    <div class="box-neutral"${styleAttr}>${text}</div>\n`;
+              } else if (isBold || fontSize === '32px') {
+                html += `    <h2${styleAttr}>${text}</h2>\n`;
+              } else if (fontSize === '24px' || fontSize === '20px') {
+                html += `    <h3${styleAttr}>${text}</h3>\n`;
+              } else {
+                html += `    <p${styleAttr}>${text}</p>\n`;
+              }
+            }
+          } else if (block.classList.contains('image-block')) {
+            const img = block.querySelector('img');
+            if (img) {
+              const caption = block.querySelector('.image-caption');
+              const captionText = caption ? caption.textContent.replace('Click to add caption...', '').trim() : '';
+              html += `    <img src="${img.src}" alt="Image">\n`;
+              if (captionText) {
+                html += `    <p class="image-caption">${captionText}</p>\n`;
+              }
+            }
+          }
+        });
+
+        html += `  </div>
+</body>
+</html>`;
+
+        const previewWindow = window.open('', 'preview', 'width=1000,height=800');
+        previewWindow.document.write(html);
+      }
+
+      // Load existing images and Iggypop2.html
+      async function loadImages() {
+        const res = await fetch('/api/files');
+        const files = await res.json();
+        const images = files.filter(f => ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.heic', '.heif'].includes(f.substring(f.lastIndexOf('.')).toLowerCase()));
+        uploadedImages = images;
+        refreshImageGallery();
+      }
+
+      loadImages();
+      loadIggypop2();
+      
+      // Hide toolbar when clicking outside
+      document.addEventListener('click', (e) => {
+        if (e.target !== textToolbar && !textToolbar.contains(e.target)) {
+          if (!currentEditingBlock || !currentEditingBlock.contains(e.target)) {
+            hideToolbar();
+          }
+        }
+      });
+    </script>
+  </body>
+</html>

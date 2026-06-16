@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IggyPop Kennel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Carlito:ital,wght@0,400;0,700;1,400;1,700&family=Caladea:ital,wght@0,400;0,700;1,400&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    :root {
+      --sidebar-width: 250px;
+    }
+
+    body {
+      background: linear-gradient(135deg, #fff1f8, #e8f7ff);
+      color: #333;
+    }
+
+    header {
+      background: linear-gradient(90deg, #ff8acb, #7dd3fc, #c084fc);
+      color: white;
+      margin-left: var(--sidebar-width);
+      width: calc(100% - var(--sidebar-width));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    header h1 {
+      font-size: 3rem;
+      line-height: 1.15;
+      letter-spacing: normal;
+      width: 100%;
+      text-align: center;
+    }
+
+    header h1 .header-brand {
+      font-weight: bold;
+    }
+
+    header h1 .header-word {
+      font-weight: 600;
+      letter-spacing: normal;
+    }
+
+    header p {
+      font-size: 1.2rem;
+      margin-top: 10px;
+    }
+
+    nav {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      background: white;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+.side-nav {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: var(--sidebar-width);
+    height: 100vh;
+    background: linear-gradient(
+        180deg,
+        #ff8acb,
+        #c084fc,
+        #7dd3fc
+    );
+    padding-top: 30px;
+    box-shadow: 4px 0 20px rgba(0,0,0,.15);
+    z-index: 1000;
+}
+
+.logo {
+    text-align: center;
+    color: white;
+    font-size: 32px;
+    font-weight: bold;
+    margin-bottom: 40px;
+}
+
+.side-nav a {
+    display: block;
+    color: white;
+    text-decoration: none;
+    padding: 18px 30px;
+    font-weight: 600;
+    transition: .3s;
+}
+
+.side-nav a:hover {
+    background: rgba(255,255,255,.2);
+    padding-left: 40px;
+}
+
+/* Dropdown styling for side-nav */
+.dropdown {
+  position: relative;
+}
+
+.dropdown > a {
+  display: block;
+  cursor: pointer;
+  padding: 18px 30px;
+  color: white;
+  font-weight: 600;
+}
+
+.dropdown .dropdown-content {
+  display: none;
+  background: rgba(255,255,255,0.04);
+}
+
+.dropdown:hover .dropdown-content,
+.dropdown:focus-within .dropdown-content,
+.dropdown.open .dropdown-content {
+  display: block;
+}
+
+.dropdown .dropdown-content a {
+  display: block;
+  padding: 12px 36px;
+  color: white;
+  text-decoration: none;
+  transition: .2s;
+}
+
+.dropdown .dropdown-content a:hover {
+  background: rgba(255,255,255,0.12);
+  padding-left: 44px;
+}
+
+.content {
+    margin-left: var(--sidebar-width);
+    padding: 40px;
+}
+    nav button {
+      border: none;
+      background: transparent;
+      padding: 18px 25px;
+      font-size: 1rem;
+      cursor: pointer;
+      color: #555;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+
+    nav button:hover,
+    nav button.active {
+      background: #ff8acb;
+      color: white;
+    }
+
+    .page {
+      display: none;
+      padding: 50px 10%;
+      animation: fadeIn 0.4s ease-in-out;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero {
+      background: white;
+      border-radius: 25px;
+      padding: 40px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    .hero h2 {
+      color: #ff5cab;
+      font-size: 2.3rem;
+      margin-bottom: 8px;
+    }
+
+    .hero p {
+      font-size: 1.1rem;
+      line-height: 1.35;
+      margin: 4px 0;
+    }
+
+    .puppy-box p,
+    .card p {
+      line-height: 1.35;
+      margin: 4px 0;
+    }
+
+    .page .hero + .hero {
+      margin-top: 1.25rem;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 25px;
+      margin-top: 30px;
+    }
+
+    @media (min-width: 901px) {
+      #home.active {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding-top: 32px;
+        padding-bottom: 40px;
+        padding-left: 5%;
+        padding-right: 5%;
+      }
+
+      #home .hero {
+        width: 100%;
+        max-width: 720px;
+      }
+
+      #home .cards {
+        width: 100%;
+        max-width: 960px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    .card {
+      background: white;
+      padding: 25px;
+      border-radius: 20px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+      text-align: center;
+      border-top: 6px solid #7dd3fc;
+    }
+
+    .card h3 {
+      color: #8b5cf6;
+      margin-bottom: 10px;
+    }
+
+    .puppy-box {
+      background: #fff;
+      padding: 25px;
+      border-radius: 20px;
+      margin-top: 20px;
+      border-left: 8px solid #ff8acb;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    }
+
+    form {
+      max-width: 600px;
+      margin: 30px auto;
+      background: white;
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 14px;
+      margin: 10px 0;
+      border: 2px solid #ddd;
+      border-radius: 12px;
+      font-size: 1rem;
+    }
+
+    textarea {
+      height: 120px;
+    }
+
+    .submit-btn {
+      background: linear-gradient(90deg, #ff8acb, #7dd3fc);
+      color: white;
+      border: none;
+      padding: 15px;
+      border-radius: 12px;
+      width: 100%;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    footer {
+      background: #333;
+      color: white;
+      text-align: center;
+      padding: 25px;
+      margin-top: 40px;
+      margin-left: var(--sidebar-width);
+      width: calc(100% - var(--sidebar-width));
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .bordered-photo {
+      display: block;
+      max-width: 100%;
+      margin: 20px auto;
+      padding: 10px;
+      background: white;
+      border: 4px solid #ff8acb;
+      border-radius: 18px;
+      box-shadow: 0 10px 28px rgba(255, 140, 203, 0.22);
+    }
+
+    .photo-gallery-wrap {
+      margin: 20px auto;
+      max-width: min(520px, 100%);
+    }
+
+    .photo-gallery-wrap .photo-gallery {
+      margin: 0;
+    }
+
+    .photo-gallery {
+      display: block;
+      margin: 0;
+      padding: 0;
+      background: none;
+      border: none;
+      box-shadow: none;
+    }
+
+    .gallery-frame {
+      position: relative;
+      width: 100%;
+      display: block;
+      text-align: center;
+      border-radius: 14px;
+      overflow: visible;
+      box-shadow: none;
+    }
+
+    .gallery-slides {
+      position: relative;
+      display: inline-block;
+      width: auto;
+      max-width: 100%;
+      vertical-align: top;
+      text-align: left;
+      background: transparent;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(15, 23, 42, 0.08);
+    }
+
+    .gallery-slides:has(.gallery-empty) {
+      display: flex;
+      width: 100%;
+      min-height: 200px;
+      align-items: center;
+      justify-content: center;
+      background: #f8fafc;
+      box-shadow: 0 2px 12px rgba(15, 23, 42, 0.08);
+    }
+
+    .gallery-slide {
+      display: none;
+      width: auto;
+      max-width: 100%;
+      max-height: 340px;
+      height: auto;
+      object-fit: contain;
+      border-radius: 14px;
+      border: none;
+      padding: 0;
+      background: transparent;
+      vertical-align: top;
+    }
+
+    .gallery-slide.active {
+      display: block;
+    }
+
+    .gallery-empty {
+      color: #94a3b8;
+      font-style: italic;
+      text-align: center;
+      padding: 24px 12px;
+      font-size: 0.9rem;
+    }
+
+    .gallery-arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 5;
+      width: 28px;
+      height: 28px;
+      border: none;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.92);
+      color: #db2777;
+      font-size: 0.95rem;
+      font-weight: 600;
+      line-height: 1;
+      cursor: pointer;
+      touch-action: manipulation;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.18);
+    }
+
+    .gallery-prev {
+      left: 10px;
+    }
+
+    .gallery-next {
+      right: 10px;
+    }
+
+    .gallery-arrow:active {
+      background: #fff;
+    }
+
+    .content-spacer {
+      min-height: 4px;
+      margin: 2px 0;
+      line-height: 1;
+      padding: 0;
+    }
+
+    .content-spacer.gap-md {
+      min-height: 8px;
+      margin: 6px 0;
+    }
+
+    .content-spacer.gap-lg {
+      min-height: 14px;
+      margin: 10px 0;
+    }
+
+    .gallery-meta {
+      width: 100%;
+      text-align: center;
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: #94a3b8;
+      font-weight: 500;
+    }
+
+    .menu-toggle,
+    .nav-backdrop {
+      display: none;
+    }
+
+    @media (max-width: 900px) {
+      header {
+        margin-left: 0;
+        width: 100%;
+        padding: 28px 16px 24px;
+        padding-top: 64px;
+      }
+
+      footer {
+        margin-left: 0;
+        width: 100%;
+      }
+
+      header h1 {
+        font-size: 2rem;
+      }
+
+      header p {
+        font-size: 1rem;
+      }
+
+      .menu-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        z-index: 1101;
+        width: 48px;
+        height: 48px;
+        border: none;
+        border-radius: 12px;
+        background: white;
+        color: #be185d;
+        font-size: 1.4rem;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        cursor: pointer;
+      }
+
+      .nav-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.4);
+        z-index: 999;
+      }
+
+      .nav-backdrop.open {
+        display: block;
+      }
+
+      .side-nav {
+        left: 0;
+        top: 0;
+        width: min(280px, 85vw);
+        transform: translateX(-105%);
+        transition: transform 0.25s ease;
+        padding-top: 20px;
+        overflow-y: auto;
+      }
+
+      .side-nav.open {
+        transform: translateX(0);
+      }
+
+      .logo {
+        font-size: 26px;
+        margin-bottom: 24px;
+      }
+
+      .side-nav a,
+      .dropdown > a {
+        padding: 14px 22px;
+      }
+
+      .dropdown .dropdown-content a {
+        padding: 12px 28px;
+      }
+
+      .content {
+        margin-left: 0;
+        padding: 16px;
+      }
+
+      .page {
+        padding: 16px 0;
+      }
+
+      .hero {
+        padding: 24px 18px;
+        border-radius: 18px;
+      }
+
+      .hero h2 {
+        font-size: 1.7rem;
+      }
+
+      .hero p {
+        font-size: 1rem;
+      }
+
+      .cards {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+
+      form {
+        padding: 20px 16px;
+        margin: 20px 0;
+      }
+
+      input, textarea, .submit-btn {
+        font-size: 16px;
+      }
+
+      footer {
+        margin-top: 24px;
+        padding: 20px 16px;
+      }
+
+      .gallery-slides:has(.gallery-empty) {
+        min-height: 160px;
+      }
+
+      .gallery-slide {
+        max-height: 260px;
+      }
+
+      .gallery-arrow {
+        width: 24px;
+        height: 24px;
+        font-size: 0.85rem;
+      }
+
+      .gallery-prev {
+        left: 8px;
+      }
+
+      .gallery-next {
+        right: 8px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      header h1 {
+        font-size: 2.2rem;
+      }
+
+      .page {
+        padding: 35px 6%;
+      }
+
+      nav button {
+        padding: 14px;
+        font-size: 0.9rem;
+      }
+    }
+
+    /* Application message styles */
+    #application-message {
+      text-align: center;
+      font-weight: 600;
+      margin-top: 12px;
+    }
+
+    .application-success { color: #16a34a; }
+    .application-error { color: #ef4444; }
+    
+    /* Checkbox row aligns with input widths */
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      margin-top: 8px;
+      border-radius: 12px;
+      box-sizing: border-box;
+      background: transparent;
+      border: 2px solid #ddd; /* subtle border to match other inputs */
+      width: 100%;
+    }
+
+    .checkbox-row input[type="checkbox"] {
+      margin: 0;
+      width: auto;
+      height: auto;
+    }
+
+    /* Sex option pills (themed) */
+    .sex-options {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    .sex-option {
+      display: inline-flex;
+      align-items: center;
+      cursor: pointer;
+      border-radius: 999px;
+      padding: 8px 14px;
+      border: 2px solid #ddd;
+      background: white;
+      font-weight: 600;
+      color: #333;
+      user-select: none;
+    }
+
+    .sex-option input { display: none; }
+
+    .sex-option input:checked + span {
+      background: linear-gradient(90deg, #ff8acb, #7dd3fc);
+      color: white;
+      border-radius: 999px;
+      padding: 8px 14px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    }
+
+    /* Color swatches for preferred color */
+    .color-options {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    .color-option {
+      display: inline-flex;
+      align-items: center;
+      cursor: pointer;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 8px 12px;
+      border: 2px solid #ddd;
+      background: white;
+      font-weight: 600;
+      color: #333;
+      user-select: none;
+    }
+
+    .color-option input { display: none; }
+
+    .color-swatch {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      border: 2px solid #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+
+    .color-option input:checked + .color-swatch + span {
+      background: linear-gradient(90deg, #ff8acb, #7dd3fc);
+      color: white;
+      padding: 6px 10px;
+      border-radius: 999px;
+    }
+
+    /* Inline checkbox for mask option */
+    .checkbox-inline {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      font-weight: 600;
+      color: #333;
+      cursor: pointer;
+    }
+
+    .checkbox-inline input { margin: 0; }
+
+    /* Mask toggle styling */
+    .mask-toggle {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .mask-toggle input {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .mask-switch {
+      display: inline-block;
+      width: 56px;
+      height: 32px;
+      background: #eee;
+      border-radius: 999px;
+      padding: 4px;
+      box-sizing: border-box;
+      transition: background 200ms ease;
+      border: 2px solid #ddd;
+    }
+
+    .mask-switch .knob {
+      display: block;
+      width: 24px;
+      height: 24px;
+      background: white;
+      border-radius: 50%;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+      transform: translateX(0);
+      transition: transform 200ms ease, background 200ms ease;
+    }
+
+    .mask-toggle input:checked + .mask-switch {
+      background: linear-gradient(90deg, #ff8acb, #7dd3fc);
+      border-color: transparent;
+    }
+
+    .mask-toggle input:checked + .mask-switch .knob {
+      transform: translateX(24px);
+    }
+
+    .mask-label {
+      font-weight: 600;
+      color: #333;
+    }
+  </style>
+</head>
+
+<body>
+
+  <button class="menu-toggle" id="menuToggle" type="button" aria-label="Open menu">☰</button>
+  <div class="nav-backdrop" id="navBackdrop"></div>
+
+  <header>
+    <h1><span class="header-brand">IggyPop</span> <span class="header-word">Kennel</span></h1>
+    <p>Elegant Italian Greyhounds raised with love, beauty, and care</p>
+  </header>
+
+  <div class="side-nav">
+    <div class="logo">IggyPop</div>
+
+    <a href="#home" data-page="home" onclick="showPage('home')" class="active">Home</a>
+    <a href="#about" data-page="about" onclick="showPage('about')" class="">About</a>
+
+    <div class="dropdown">
+      <a href="#" aria-haspopup="true">Our Dogs ▾</a>
+      <div class="dropdown-content">
+        <a href="#puppies" data-page="puppies" onclick="showPage('puppies')" class="">Puppies</a>
+        <a href="#dams" data-page="dams" onclick="showPage('dams')">Dams</a>
+        <a href="#sires" data-page="sires" onclick="showPage('sires')">Sires</a>
+        <a href="#retired" data-page="retired" onclick="showPage('retired')">Retired Dogs</a>
+      </div>
+    </div>
+
+    <a href="#available" data-page="available" onclick="showPage('available')" class="">Available Puppies</a>
+    <a href="#planned" data-page="planned" onclick="showPage('planned')" class="">Planned Litters</a>
+    <a href="#gallery" data-page="gallery" onclick="showPage('gallery')" class="">Gallery</a>
+    <a href="#testimonials" data-page="testimonials" onclick="showPage('testimonials')" class="">Testimonials</a>
+    <a href="#application" data-page="application" onclick="showPage('application')" class="">Puppy Application</a>
+    <a href="#contact" data-page="contact" onclick="showPage('contact')" class="">Contact</a>
+  </div>
+
+  <div class="content">
+
+    <section id="home" class="page active">
+      <div class="hero">
+        <h2>Welcome to IggyPop Kennel</h2>
+        <p>Elegant Italian Greyhounds raised with love, beauty, and care. We are located in Lexington, Kentucky. We raise show dogs at home with the best and healthiest bloodlines. All dogs will be genetically tested prior to being bred. We raise our puppies and dogs with the highest standards.</p>
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <h3>Imported Lines</h3>
+          <p>Carefully selected bloodlines with beauty, health, and temperament in mind.</p>
+        </div>
+        <div class="card">
+          <h3>Health Focused</h3>
+          <p>We value responsible breeding, health testing, and proper puppy care.</p>
+        </div>
+        <div class="card">
+          <h3>Family Raised</h3>
+          <p>Our puppies are loved, socialized, and raised like family.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="about" class="page">
+      <div class="hero">
+        <h2>About Us</h2>
+        <p>IggyPop Kennel was created by owner and founder, Margaret Youkilis, from a love for Italian Greyhounds and their graceful, affectionate, and playful nature.</p><p class="content-spacer"><br></p></div><div class="photo-gallery-wrap" id="gallery2"><div class="photo-gallery" data-gallery=""><div class="gallery-frame"><div class="gallery-slides"><img class="gallery-slide active" src="Iggypop 2/IMG_7071-20260616-100839.jpg" alt="Gallery photo"><button type="button" class="gallery-arrow gallery-prev" aria-label="Previous photo">‹</button><button type="button" class="gallery-arrow gallery-next" aria-label="Next photo">›</button></div></div></div><div class="gallery-meta">1 / 1</div></div><p class="content-spacer"><br></p>
+    </section>
+
+    <section id="puppies" class="page">
+      <div class="hero">
+        <h2>Puppies</h2>
+        <p>Meet our current and upcoming puppies.</p>
+      </div>
+
+      <div class="puppy-box">
+        <h3>Upcoming Litter</h3>
+        <p>Beautiful Italian Greyhound puppies expected soon. Contact us to join the waitlist.</p>
+      </div>
+    </section>
+
+    <section id="dams" class="page">
+      <div class="hero">
+        <h2>Dams</h2>
+        <p>Meet our beautiful female Italian Greyhounds.</p>
+      </div>
+    </section>
+
+    <section id="sires" class="page">
+      <div class="hero">
+        <h2>Sires</h2>
+        <p>Meet our handsome male Italian Greyhounds.</p>
+      </div>
+    </section>
+
+    <section id="retired" class="page">
+      <div class="hero">
+        <h2>Retired Dogs</h2>
+        <p>Our retired dogs will always be part of the IggyPop family.</p>
+      </div>
+    </section>
+
+    <section id="available" class="page">
+      <div class="hero">
+        <h2>Available Puppies</h2>
+        <p>Check here for puppies currently available.</p>
+      </div>
+    </section>
+
+    <section id="planned" class="page">
+      <div class="hero" style="line-height: 1 !important;"><span style="font-size: 13px !important;">
+        <h2>Planned Litters</h2>
+        <p style="line-height: 1.2 !important;">December 2026 litter planned: Katana Skywinds x Emerald Galaxy</p><p class="content-spacer"><br></p>
+      </span></div>
+    </section>
+
+    <section id="gallery" class="page">
+      <div class="hero">
+        <h2>Gallery</h2>
+        <p>Photos of our dogs and puppies.</p>
+      </div>
+
+      <div class="photo-gallery-wrap" id="gallery1">
+        <div class="photo-gallery" data-gallery="">
+          <div class="gallery-frame">
+            <div class="gallery-slides">
+              <img src="Iggypop 2/about-photo.jpg" alt="IggyPop dogs" class="gallery-slide active">
+              <img src="Iggypop 2/dams-photo.jpg" alt="IggyPop dams" class="gallery-slide">
+              <img class="gallery-slide" src="Iggypop 2/IMG_7071-20260616-100839.jpg" alt="Gallery photo">
+              
+              
+            <button type="button" class="gallery-arrow gallery-prev" aria-label="Previous photo">‹</button><button type="button" class="gallery-arrow gallery-next" aria-label="Next photo">›</button></div>
+          </div>
+        </div>
+        <div class="gallery-meta">1 / 3</div>
+      </div>
+    </section>
+
+    <section id="testimonials" class="page">
+      <div class="hero">
+        <h2>Testimonials</h2>
+        <p>Kind words from our puppy families.</p>
+      </div>
+    </section>
+
+    <section id="application" class="page">
+      <div class="hero">
+        <h2>Puppy Application</h2>
+        <p>Apply to be considered for an IggyPop puppy.</p>
+      </div>
+
+      <form id="application-form">
+        <input name="name" type="text" placeholder="Full Name" required="">
+        <input name="email" type="email" placeholder="Email" required="">
+        <input name="phone" type="tel" placeholder="Phone Number">
+        <input name="address" type="text" placeholder="Address (city, state)">
+        <label style="display:block; margin-top:8px;">Preferred Color</label>
+        <div class="color-options" role="radiogroup" aria-label="Preferred color">
+          <label class="color-option"><input type="radio" name="preferredColor" value="grey"><span class="color-swatch" style="background:#9ca3af"></span><span>Grey</span></label>
+          <label class="color-option"><input type="radio" name="preferredColor" value="blue fawn" checked=""><span class="color-swatch" style="background:#c6b9b0"></span><span>Blue Fawn</span></label>
+          <label class="color-option"><input type="radio" name="preferredColor" value="blue fawn and white"><span class="color-swatch" style="background:linear-gradient(90deg,#c6b9b0 50%,#ffffff 50%)"></span><span>Blue Fawn &amp; White</span></label>
+          <label class="color-option"><input type="radio" name="preferredColor" value="blue"><span class="color-swatch" style="background:#3b82f6"></span><span>Blue</span></label>
+          <label class="color-option"><input type="radio" name="preferredColor" value="blue and white"><span class="color-swatch" style="background:linear-gradient(90deg,#3b82f6 50%,#ffffff 50%)"></span><span>Blue &amp; White</span></label>
+          <label class="color-option"><input type="radio" name="preferredColor" value="cream"><span class="color-swatch" style="background:#f6e7cc"></span><span>Cream</span></label>
+          <label class="color-option"><input type="radio" name="preferredColor" value="black"><span class="color-swatch" style="background:#111827"></span><span>Black</span></label>
+          <label class="color-option"><input type="radio" name="preferredColor" value="black and white"><span class="color-swatch" style="background:linear-gradient(90deg,#111827 50%,#ffffff 50%)"></span><span>Black &amp; White</span></label>
+          <label class="color-option"><input type="radio" name="preferredColor" value="fawn"><span class="color-swatch" style="background:#d6b89a"></span><span>Fawn</span></label>
+          <label class="color-option"><input type="radio" name="preferredColor" value="fawn and white"><span class="color-swatch" style="background:linear-gradient(90deg,#d6b89a 50%,#ffffff 50%)"></span><span>Fawn &amp; White</span></label>
+          <label class="color-option"><input type="radio" name="preferredColor" value="red"><span class="color-swatch" style="background:#b34747"></span><span>Red</span></label>
+          <label class="color-option"><input type="radio" name="preferredColor" value="red and white"><span class="color-swatch" style="background:linear-gradient(90deg,#b34747 50%,#ffffff 50%)"></span><span>Red &amp; White</span></label>
+        </div>
+
+        <label class="mask-toggle" style="display:block;">
+          <input type="checkbox" name="mask" id="maskToggle">
+          <span class="mask-switch" aria-hidden="true"><span class="knob"></span></span>
+          <span class="mask-label">Mask (optional)</span>
+        </label>
+
+        <label style="display:block; margin-top:8px;">Preferred Sex</label>
+        <div class="sex-options" role="radiogroup" aria-label="Preferred sex">
+          <label class="sex-option"><input type="radio" name="sex" value=""><span>No preference</span></label>
+          <label class="sex-option"><input type="radio" name="sex" value="male"><span>Male</span></label>
+          <label class="sex-option"><input type="radio" name="sex" value="female"><span>Female</span></label>
+        </div>
+        <textarea name="message" placeholder="Tell us about your home, lifestyle, and what you're looking for"></textarea>
+        <label class="checkbox-row" for="agree">
+          <input id="agree" name="agree" type="checkbox" required="">
+          <span>I agree to be contacted about this application</span>
+        </label>
+        <button class="submit-btn" type="submit">Submit Application</button>
+        <div id="application-message" aria-live="polite"></div>
+        <p style="margin-top:12px;font-size:14px;">Or email <a href="mailto:mlyoukilis@gmail.com">mlyoukilis@gmail.com</a> directly.</p>
+      </form>
+    </section>
+
+    <section id="contact" class="page">
+      <div class="hero">
+        <h2>Contact IggyPop Kennel</h2>
+        <p>Interested in a puppy? Send us a message below.</p>
+      </div>
+
+      <form id="contact-form">
+        <input name="contact_name" type="text" placeholder="Your Name" required="">
+        <input name="contact_email" type="email" placeholder="Your Email" required="">
+        <input name="contact_phone" type="tel" placeholder="Phone Number">
+        <textarea name="contact_message" placeholder="Tell us what you are looking for" required=""></textarea>
+        <button class="submit-btn" type="submit">Send Message</button>
+        <div id="contact-message" aria-live="polite"></div>
+        <p style="margin-top:12px;font-size:14px;">Or email <a href="mailto:mlyoukilis@gmail.com">mlyoukilis@gmail.com</a> directly.</p>
+      </form>
+    </section>
+
+  </div>
+
+  <footer><p>© 2026 IggyPop Kennel | Italian Greyhounds</p>
+  </footer>
+
+  <script>
+    function closeMobileNav() {
+      document.querySelector('.side-nav')?.classList.remove('open');
+      document.getElementById('navBackdrop')?.classList.remove('open');
+    }
+
+    function openMobileNav() {
+      document.querySelector('.side-nav')?.classList.add('open');
+      document.getElementById('navBackdrop')?.classList.add('open');
+    }
+
+    function updateGalleryCounter(gallery) {
+      const wrap = gallery.closest('.photo-gallery-wrap') || gallery.parentElement;
+      const slides = gallery.querySelectorAll('.gallery-slide');
+      const activeIndex = Array.from(slides).findIndex(slide => slide.classList.contains('active'));
+      const counter = wrap?.querySelector('.gallery-meta');
+      if (counter) {
+        counter.textContent = slides.length ? `${activeIndex + 1} / ${slides.length}` : '';
+      }
+    }
+
+    function showGallerySlide(gallery, nextIndex) {
+      const slides = gallery.querySelectorAll('.gallery-slide');
+      if (!slides.length) return;
+      const index = (nextIndex + slides.length) % slides.length;
+      slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
+      updateGalleryCounter(gallery);
+    }
+
+    function initGalleries(root) {
+      (root || document).querySelectorAll('[data-gallery]').forEach(gallery => {
+        if (gallery.dataset.ready === 'true') return;
+        gallery.dataset.ready = 'true';
+        updateGalleryCounter(gallery);
+
+        let touchStartX = 0;
+        const frame = gallery.querySelector('.gallery-frame');
+
+        frame?.addEventListener('touchstart', (e) => {
+          touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        frame?.addEventListener('touchend', (e) => {
+          const delta = e.changedTouches[0].screenX - touchStartX;
+          if (Math.abs(delta) < 40) return;
+          const slides = gallery.querySelectorAll('.gallery-slide');
+          const activeIndex = Array.from(slides).findIndex(slide => slide.classList.contains('active'));
+          showGallerySlide(gallery, activeIndex + (delta < 0 ? 1 : -1));
+        }, { passive: true });
+      });
+    }
+
+    document.addEventListener('click', (e) => {
+      const prev = e.target.closest('.gallery-prev');
+      const next = e.target.closest('.gallery-next');
+      if (!prev && !next) return;
+      e.preventDefault();
+      const gallery = (prev || next).closest('[data-gallery]');
+      if (!gallery) return;
+      const slides = gallery.querySelectorAll('.gallery-slide');
+      const activeIndex = Array.from(slides).findIndex(slide => slide.classList.contains('active'));
+      showGallerySlide(gallery, activeIndex + (next ? 1 : -1));
+    });
+
+    function showPage(pageId) {
+      const pages = document.querySelectorAll('.page');
+      pages.forEach(page => page.classList.remove('active'));
+
+      const target = document.getElementById(pageId);
+      if (target) target.classList.add('active');
+
+      document.querySelectorAll('.side-nav a').forEach(a => a.classList.remove('active'));
+      const link = document.querySelector(`.side-nav a[data-page="${pageId}"]`);
+      if (link) link.classList.add('active');
+
+      closeMobileNav();
+    }
+
+    // Initialize first page and active link
+    document.addEventListener('DOMContentLoaded', () => {
+      showPage('home');
+
+      const menuToggle = document.getElementById('menuToggle');
+      const navBackdrop = document.getElementById('navBackdrop');
+      const sideNav = document.querySelector('.side-nav');
+
+      menuToggle?.addEventListener('click', () => {
+        if (sideNav?.classList.contains('open')) {
+          closeMobileNav();
+        } else {
+          openMobileNav();
+        }
+      });
+
+      navBackdrop?.addEventListener('click', closeMobileNav);
+
+      initGalleries();
+
+      // Dropdown toggle for mobile/tap: toggle .open on the .dropdown when its top link is clicked
+      const dropdown = document.querySelector('.dropdown');
+      if (dropdown) {
+        const toggle = dropdown.querySelector(':scope > a');
+        if (toggle) {
+          toggle.addEventListener('click', (e) => {
+            // Prevent default navigation for the toggle anchor
+            e.preventDefault();
+            dropdown.classList.toggle('open');
+          });
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+          if (!dropdown.contains(e.target)) {
+            dropdown.classList.remove('open');
+          }
+        });
+
+        // Allow keyboard activation (Enter / Space)
+        toggle && toggle.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            dropdown.classList.toggle('open');
+          }
+        });
+      }
+
+        const FORM_EMAIL = 'mlyoukilis@gmail.com';
+
+        function getFormEndpoint() {
+          if (window.location.protocol === 'file:') return null;
+          const host = window.location.hostname;
+          const port = window.location.port;
+          const onEditorServer = port === '3000'
+            && !/^(www\.)?iggypopm\.com$/i.test(host)
+            && (host.endsWith('.local')
+            || host.includes('.loca.lt')
+            || host === 'localhost'
+            || host === '127.0.0.1'
+            || window.location.pathname.startsWith('/preview'));
+          if (onEditorServer) {
+            return `${window.location.origin}/api/public/form-submit`;
+          }
+          return `https://formsubmit.co/ajax/${FORM_EMAIL}`;
+        }
+
+        async function submitToFormSubmit(payload, messageEl, form, successText) {
+          function showMessage(text, type = 'success') {
+            if (!messageEl) return;
+            messageEl.textContent = text;
+            messageEl.classList.remove('application-success', 'application-error');
+            messageEl.classList.add(type === 'success' ? 'application-success' : 'application-error');
+          }
+
+          const endpoint = getFormEndpoint();
+          if (!endpoint) {
+            showMessage('Forms only work when the site is opened through a web link (not as a saved file on your computer).', 'error');
+            return;
+          }
+
+          const submitBtn = form.querySelector('button[type="submit"]');
+          const originalLabel = submitBtn?.textContent || '';
+          if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Sending…';
+          }
+
+          try {
+            const response = await fetch(endpoint, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+              },
+              body: JSON.stringify({
+                _template: 'table',
+                _captcha: 'false',
+                ...payload
+              })
+            });
+
+            const result = await response.json().catch(() => ({}));
+            const succeeded = result.success === true || result.success === 'true';
+            if (!response.ok || !succeeded) {
+              const msg = (result.message || 'Could not send form.').toString();
+              if (/activation/i.test(msg)) {
+                showMessage('Check mlyoukilis@gmail.com (including Spam) for a FormSubmit activation email and click the link. Then try again.', 'error');
+              } else if (/web server/i.test(msg)) {
+                showMessage('Open the site through a web link instead of double-clicking the HTML file.', 'error');
+              } else {
+                showMessage(msg, 'error');
+              }
+              return;
+            }
+
+            showMessage(successText, 'success');
+            form.reset();
+          } catch (err) {
+            console.error(err);
+            showMessage('Sorry — could not send right now. Please try again or email mlyoukilis@gmail.com directly.', 'error');
+          } finally {
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = originalLabel;
+            }
+          }
+        }
+
+        const appForm = document.getElementById('application-form');
+        if (appForm) {
+          const appMessage = document.getElementById('application-message');
+
+          appForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const fd = new FormData(appForm);
+            const data = {
+              name: (fd.get('name') || '').toString().trim(),
+              email: (fd.get('email') || '').toString().trim(),
+              phone: (fd.get('phone') || '').toString().trim(),
+              address: (fd.get('address') || '').toString().trim(),
+              preferredColor: (fd.get('preferredColor') || '').toString(),
+              mask: !!fd.get('mask'),
+              sex: (fd.get('sex') || '').toString(),
+              message: (fd.get('message') || '').toString().trim(),
+              agree: !!fd.get('agree')
+            };
+
+            if (!data.name || !data.email || !data.agree) {
+              appMessage.textContent = 'Please complete the required fields and agree to be contacted.';
+              appMessage.classList.remove('application-success');
+              appMessage.classList.add('application-error');
+              return;
+            }
+
+            submitToFormSubmit({
+              _subject: 'New IggyPop Puppy Application',
+              _replyto: data.email,
+              Name: data.name,
+              Email: data.email,
+              Phone: data.phone,
+              Address: data.address,
+              'Preferred Color': data.preferredColor,
+              Mask: data.mask ? 'Yes' : 'No',
+              'Preferred Sex': data.sex || 'No preference',
+              Message: data.message,
+              'Agreed to contact': data.agree ? 'Yes' : 'No'
+            }, appMessage, appForm, 'Application submitted — thank you! We will contact you soon.');
+          });
+        }
+
+        const contactForm = document.getElementById('contact-form');
+        if (contactForm) {
+          const contactMessage = document.getElementById('contact-message');
+
+          contactForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const fd = new FormData(contactForm);
+            const data = {
+              name: (fd.get('contact_name') || '').toString().trim(),
+              email: (fd.get('contact_email') || '').toString().trim(),
+              phone: (fd.get('contact_phone') || '').toString().trim(),
+              message: (fd.get('contact_message') || '').toString().trim()
+            };
+
+            if (!data.name || !data.email || !data.message) {
+              contactMessage.textContent = 'Please complete all required fields.';
+              contactMessage.classList.remove('application-success');
+              contactMessage.classList.add('application-error');
+              return;
+            }
+
+            submitToFormSubmit({
+              _subject: 'New IggyPop Contact Message',
+              _replyto: data.email,
+              Name: data.name,
+              Email: data.email,
+              Phone: data.phone,
+              Message: data.message
+            }, contactMessage, contactForm, 'Message sent — thank you! We will get back to you soon.');
+          });
+        }
+    });
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</body>
+
+</html>

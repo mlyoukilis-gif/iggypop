@@ -1,0 +1,9 @@
+.editor-pin
+.editor-remote.json
+.editor-ftp.json
+.DS_Store
+.vscode/
+node_modules/
+website-upload.zip
+*.HEIC
+*.heic

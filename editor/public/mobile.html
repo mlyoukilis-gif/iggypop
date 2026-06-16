@@ -1,0 +1,2755 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#f2f2f7" />
+  <title>IggyPop Editor</title>
+  <style>
+    :root {
+      --accent: #007aff;
+      --accent-soft: rgba(0, 122, 255, 0.12);
+      --pink: #007aff;
+      --blue: #5ac8fa;
+      --bg: #f2f2f7;
+      --surface: #ffffff;
+      --surface-2: #f2f2f7;
+      --text: #1c1c1e;
+      --muted: #8e8e93;
+      --border: rgba(60, 60, 67, 0.12);
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+      --shadow-sheet: 0 -4px 32px rgba(0, 0, 0, 0.12);
+      --radius: 12px;
+      --radius-lg: 16px;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100dvh;
+      overflow: hidden;
+    }
+
+    .screen { display: none; height: 100dvh; flex-direction: column; }
+    .screen.active { display: flex; }
+
+    /* Login — GoodNotes library feel */
+    #loginScreen {
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: var(--bg);
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 360px;
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 28px 24px;
+      box-shadow: var(--shadow);
+      text-align: center;
+      border: 0.5px solid var(--border);
+    }
+
+    .login-card h1 {
+      font-size: 1.35rem;
+      margin-bottom: 8px;
+      color: var(--text);
+      font-weight: 600;
+    }
+    .login-card p { color: var(--muted); margin-bottom: 20px; font-size: 0.95rem; }
+
+    .pin-input {
+      width: 100%;
+      font-size: 1.5rem;
+      letter-spacing: 0.4em;
+      text-align: center;
+      padding: 14px;
+      border: none;
+      border-radius: var(--radius);
+      margin-bottom: 16px;
+      background: var(--surface-2);
+      color: var(--text);
+    }
+
+    .pin-input:focus {
+      outline: 2px solid var(--accent);
+      background: var(--surface);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 48px;
+      padding: 0 18px;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-primary {
+      width: 100%;
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-primary:active { opacity: 0.85; }
+
+    .btn-secondary { background: var(--surface-2); color: var(--text); }
+    .btn-success { background: var(--accent); color: white; }
+    .btn-ghost {
+      background: var(--surface-2);
+      color: var(--text);
+      border: none;
+    }
+
+    .btn-ghost:active { background: #e5e5ea; }
+
+    .error { color: #ff3b30; font-size: 0.9rem; margin-top: 12px; min-height: 1.2em; }
+
+    /* Editor — GoodNotes document view */
+    #editorScreen { background: var(--bg); }
+
+    .top-bar {
+      display: grid;
+      grid-template-columns: 44px 1fr auto;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      background: rgba(242, 242, 247, 0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 0.5px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .top-bar h2 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--text);
+    }
+
+    #menuBtn {
+      min-height: 36px;
+      min-width: 36px;
+      padding: 0;
+      border-radius: 8px;
+      background: transparent;
+      border: none;
+      font-size: 1.15rem;
+      color: var(--accent);
+    }
+
+    .status-pill {
+      font-size: 0.7rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--surface-2);
+      color: var(--muted);
+      flex-shrink: 0;
+      font-weight: 500;
+    }
+
+    .status-pill.unsaved { background: #fff4e5; color: #c93400; }
+
+    #editHint { display: none; }
+
+    .editor-main {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 10px 10px 0;
+      background: var(--bg);
+    }
+
+    .page-canvas {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      border: 0.5px solid var(--border);
+      overflow: hidden;
+    }
+
+    #previewFrame {
+      flex: 1;
+      width: 100%;
+      border: none;
+      background: white;
+    }
+
+    #codeEditor {
+      flex: 1;
+      width: 100%;
+      border: none;
+      padding: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      resize: none;
+      display: none;
+      background: var(--surface);
+    }
+
+    #codeEditor.visible { display: block; }
+
+    .bottom-bar {
+      display: flex;
+      gap: 6px;
+      padding: 8px 10px calc(8px + var(--safe-bottom));
+      background: transparent;
+      border: none;
+      flex-shrink: 0;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .bottom-bar .btn {
+      flex: 1 0 auto;
+      min-width: 0;
+      min-height: 44px;
+      font-size: 0.75rem;
+      padding: 0 10px;
+      border-radius: 10px;
+      font-weight: 500;
+      background: rgba(255, 255, 255, 0.95);
+      color: var(--text);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+      border: 0.5px solid var(--border);
+    }
+
+    .bottom-bar .btn:active { background: #e5e5ea; }
+
+    .bottom-bar .btn-format { color: var(--accent); }
+    .bottom-bar .btn-photo { color: var(--accent); }
+    .bottom-bar .btn-publish { color: #34c759; }
+    .bottom-bar #saveBtn {
+      background: var(--accent);
+      color: white;
+      border-color: transparent;
+      font-weight: 600;
+    }
+
+    .drawer-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.25);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 100;
+    }
+
+    .drawer-backdrop.open { display: block; }
+
+    .drawer-backdrop.resize-passthrough,
+    .drawer-backdrop.format-passthrough,
+    .drawer-backdrop.photos-passthrough {
+      pointer-events: none;
+      background: transparent;
+      backdrop-filter: none;
+    }
+
+    .drawer {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 110;
+      background: var(--surface);
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      padding: 8px 16px calc(16px + var(--safe-bottom));
+      transform: translateY(110%);
+      transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+      max-height: 78dvh;
+      overflow-y: auto;
+      pointer-events: none;
+      box-shadow: var(--shadow-sheet);
+      border-top: 0.5px solid var(--border);
+    }
+
+    .drawer.open {
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .drawer::before {
+      content: '';
+      display: block;
+      width: 36px;
+      height: 5px;
+      margin: 4px auto 14px;
+      background: #c7c7cc;
+      border-radius: 3px;
+    }
+
+    .drawer-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: var(--surface);
+      padding-bottom: 4px;
+    }
+
+    .drawer h3 {
+      font-size: 1.05rem;
+      margin: 0;
+      flex: 1;
+      min-width: 0;
+      font-weight: 600;
+      text-align: center;
+      color: var(--text);
+    }
+
+    .drawer-close {
+      background: var(--surface-2);
+      border: none;
+      font-size: 1rem;
+      min-width: 36px;
+      min-height: 36px;
+      padding: 0;
+      cursor: pointer;
+      border-radius: 50%;
+      color: var(--muted);
+      flex-shrink: 0;
+      touch-action: manipulation;
+      line-height: 1;
+    }
+
+    .drawer-close:active { background: #e5e5ea; }
+
+    .file-list { list-style: none; }
+    .file-list li {
+      padding: 14px 14px;
+      border-radius: var(--radius);
+      margin-bottom: 4px;
+      background: transparent;
+      cursor: pointer;
+      font-size: 0.95rem;
+      border: 0.5px solid transparent;
+    }
+
+    .file-list li:active { background: var(--surface-2); }
+
+    .file-list li.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .format-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .format-grid .btn { min-height: 44px; padding: 0 8px; font-size: 0.85rem; }
+
+    .box-options {
+      display: grid;
+      gap: 10px;
+    }
+
+    .box-option {
+      text-align: left;
+      padding: 14px 16px;
+      border: none;
+      border-radius: var(--radius);
+      background: var(--surface-2);
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .box-option strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .box-option span {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .box-option.hero-preview { border-left: 3px solid var(--accent); }
+    .box-option.notice-preview { border-left: 3px solid #5ac8fa; }
+    .box-option.text-preview { border-left: 3px solid #af52de; }
+    .box-option.gallery-preview { border-left: 3px solid #ff9500; }
+
+    .gallery-target {
+      text-align: left;
+      padding: 12px 14px;
+      border: none;
+      border-radius: var(--radius);
+      background: var(--surface-2);
+      cursor: pointer;
+      font-size: 0.9rem;
+      touch-action: manipulation;
+    }
+
+    .gallery-target.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .gallery-target-list {
+      display: grid;
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    .gallery-manage {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 0.5px solid var(--border);
+    }
+
+    .upload-area input { display: none; }
+
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .photo-grid button {
+      border: none;
+      padding: 0;
+      background: var(--surface-2);
+      border-radius: var(--radius);
+      overflow: hidden;
+      aspect-ratio: 1;
+      cursor: pointer;
+    }
+
+    .photo-grid img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .photo-actions {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .photo-hint {
+      margin-top: 10px;
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .photo-mode {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .upload-area {
+      margin-top: 12px;
+      padding: 20px;
+      border: 1.5px dashed #c7c7cc;
+      border-radius: var(--radius);
+      text-align: center;
+      color: var(--muted);
+      cursor: pointer;
+      background: var(--surface-2);
+    }
+
+    .photo-mode .btn.active {
+      background: var(--accent);
+      color: white;
+      border: none;
+    }
+
+    .drawer input[type="text"],
+    .drawer input[type="password"] {
+      width: 100%;
+      padding: 12px;
+      margin-top: 6px;
+      border: none;
+      border-radius: var(--radius);
+      background: var(--surface-2);
+      font-size: 0.95rem;
+      color: var(--text);
+    }
+
+    .drawer input:focus {
+      outline: 2px solid var(--accent);
+      background: var(--surface);
+    }
+
+    .drawer label {
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .resize-controls {
+      display: grid;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .resize-controls input[type="range"] {
+      width: 100%;
+      height: 36px;
+    }
+
+    .size-presets {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .size-presets .btn { min-height: 44px; padding: 0 6px; font-size: 0.8rem; }
+
+    .font-size-controls {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    .font-size-controls input[type="range"],
+    .line-spacing-controls input[type="range"] {
+      width: 100%;
+      height: 36px;
+    }
+
+    .line-spacing-controls {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    .font-family-select {
+      width: 100%;
+      margin-top: 6px;
+      padding: 12px 10px;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.95rem;
+      background: var(--surface-2);
+      color: var(--text);
+      min-height: 44px;
+    }
+
+    input[type="range"] {
+      accent-color: var(--accent);
+    }
+
+    .box-select-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .box-select-row .btn {
+      min-height: 44px;
+      font-size: 0.78rem;
+      padding: 0 6px;
+    }
+
+    @media (max-width: 380px) {
+      .bottom-bar .btn { font-size: 0.7rem; padding: 0 8px; }
+      .top-bar h2 { font-size: 0.82rem; }
+    }
+
+    .toast {
+      position: fixed;
+      top: 52px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-120%);
+      background: rgba(60, 60, 67, 0.92);
+      color: white;
+      padding: 10px 18px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      z-index: 200;
+      transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+      backdrop-filter: blur(12px);
+    }
+
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    @media (min-width: 768px) {
+      .drawer {
+        left: auto;
+        right: 16px;
+        bottom: 16px;
+        width: 360px;
+        border-radius: 16px;
+        transform: translateY(20px);
+        opacity: 0;
+      }
+
+      .drawer.open {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="loginScreen" class="screen active">
+    <div class="login-card">
+      <h1>IggyPop</h1>
+      <p>Enter the PIN from your Mac Terminal to open your notebook.</p>
+      <p style="font-size:0.85rem; color:#6b7280; margin-bottom:16px;">
+        Start the editor first: double-click <strong>Start Editor.command</strong> in the Iggypop 2 folder.
+        Bookmark the links below — they stay the same every time.
+      </p>
+      <div id="editorLinks" style="font-size:0.85rem; color:#374151; margin-bottom:16px; text-align:left; background:#f9fafb; border-radius:12px; padding:12px; line-height:1.6;"></div>
+      <input id="pinInput" class="pin-input" type="password" inputmode="numeric" maxlength="6" placeholder="••••" autocomplete="one-time-code" />
+      <button class="btn btn-primary" id="loginBtn">Open</button>
+      <div class="error" id="loginError"></div>
+    </div>
+  </div>
+
+  <div id="editorScreen" class="screen">
+    <div class="top-bar">
+      <button class="btn btn-ghost" id="menuBtn" style="min-height:40px; padding:0 12px;">☰</button>
+      <h2 id="fileLabel">Iggypop.html</h2>
+      <span class="status-pill" id="saveStatus">Saved</span>
+      <span class="status-pill" id="editHint" style="background:#eef2ff;color:#3730a3;">Press & drag to select</span>
+    </div>
+
+    <div class="editor-main">
+      <div class="page-canvas">
+        <iframe id="previewFrame" title="Site preview"></iframe>
+        <textarea id="codeEditor" spellcheck="false"></textarea>
+      </div>
+    </div>
+
+    <div class="bottom-bar">
+      <button class="btn" id="photosBtn" title="Photos">Photos</button>
+      <button class="btn" id="boxBtn" title="Add box">Box</button>
+      <button class="btn" id="resizeBtn" title="Resize">Size</button>
+      <button class="btn btn-format" id="formatBarBtn" title="Format">Format</button>
+      <button class="btn btn-publish" id="publishBtn" title="Publish">Publish</button>
+      <button class="btn" id="saveBtn" title="Save">Save</button>
+    </div>
+  </div>
+
+  <div class="drawer-backdrop" id="drawerBackdrop"></div>
+
+  <div class="drawer" id="filesDrawer">
+    <div class="drawer-header">
+      <h3>Files</h3>
+      <button type="button" class="drawer-close" data-close aria-label="Close">✕</button>
+    </div>
+    <ul class="file-list" id="fileList"></ul>
+  </div>
+
+  <div class="drawer" id="publishDrawer">
+    <div class="drawer-header">
+      <h3>Publish to iggypopm.com</h3>
+      <button type="button" class="drawer-close" data-close aria-label="Close">✕</button>
+    </div>
+    <p class="photo-hint">Uploads your saved site to Network Solutions. Enter your FTP details once — find them in Network Solutions → Hosting → FTP settings.</p>
+    <label style="display:block; margin-top:10px; font-size:0.9rem;">FTP host</label>
+    <input id="ftpHost" type="text" placeholder="ftp-a5349bf4.registeredsite.com" style="width:100%; padding:12px; margin-top:6px; border:1px solid var(--border); border-radius:10px;" />
+    <label style="display:block; margin-top:10px; font-size:0.9rem;">FTP username</label>
+    <input id="ftpUser" type="text" placeholder="your FTP username" style="width:100%; padding:12px; margin-top:6px; border:1px solid var(--border); border-radius:10px;" />
+    <label style="display:block; margin-top:10px; font-size:0.9rem;">FTP password</label>
+    <input id="ftpPassword" type="password" placeholder="your FTP password" style="width:100%; padding:12px; margin-top:6px; border:1px solid var(--border); border-radius:10px;" />
+    <label style="display:block; margin-top:10px; font-size:0.9rem;">Remote folder</label>
+    <input id="ftpRemoteDir" type="text" value="public_html" style="width:100%; padding:12px; margin-top:6px; border:1px solid var(--border); border-radius:10px;" />
+    <button type="button" class="btn btn-secondary" id="saveFtpBtn" style="width:100%; margin-top:14px;">Save FTP settings</button>
+    <button type="button" class="btn btn-primary" id="publishNowBtn" style="width:100%; margin-top:10px;">🌐 Publish website now</button>
+    <p class="photo-hint" id="publishStatus" style="margin-top:12px;"></p>
+  </div>
+
+  <div class="drawer" id="photosDrawer">
+    <div class="drawer-header">
+      <h3>Photos</h3>
+      <button type="button" class="drawer-close" data-close aria-label="Close">✕</button>
+    </div>
+    <div class="photo-actions">
+      <button class="btn btn-primary" id="libraryBtn">🖼️ Add Photos (Build Gallery)</button>
+      <button class="btn btn-ghost" id="cameraBtn">📸 Take a Photo</button>
+    </div>
+    <input type="file" id="libraryInput" accept="image/*,.heic,.heif" multiple hidden />
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden />
+    <p class="photo-hint" id="photoModeHint">Pick one or more photos — they become a gallery with ← → arrows. Tap a photo below to add more slides.</p>
+    <div id="galleryTargetSection" style="display:none;">
+      <p class="photo-hint" style="margin-bottom:6px;"><strong>Add photos to:</strong></p>
+      <div class="gallery-target-list" id="galleryTargetList"></div>
+      <button type="button" class="btn btn-ghost" id="newGalleryBtn" style="width:100%;">+ New gallery on this page</button>
+    </div>
+    <div class="gallery-manage" id="galleryManageSection" style="display:none;">
+      <p class="photo-hint" id="galleryManageLabel">Gallery selected</p>
+      <button type="button" class="btn btn-ghost" id="removeSlideBtn">🗑 Remove current photo</button>
+      <button type="button" class="btn btn-ghost" id="deleteGalleryBtn" style="color:#dc2626;">✕ Delete this gallery</button>
+    </div>
+    <p class="photo-hint"><button type="button" class="btn btn-ghost" id="modeBorderedBtn" style="width:100%; margin-top:8px;">Or add one bordered photo instead</button></p>
+    <div class="photo-grid" id="photoGrid"></div>
+  </div>
+
+  <div class="drawer" id="boxesDrawer">
+    <div class="drawer-header">
+      <h3>Add Text Box</h3>
+      <button type="button" class="drawer-close" data-close aria-label="Close">✕</button>
+    </div>
+    <p class="photo-hint">Tap where you want the box on the page first, or it will be added to the current section.</p>
+    <div class="box-options">
+      <button type="button" class="box-option hero-preview" data-box="hero">
+        <strong>Hero Box</strong>
+        <span>White rounded box with heading — like your main page sections.</span>
+      </button>
+      <button type="button" class="box-option notice-preview" data-box="notice">
+        <strong>Notice Box</strong>
+        <span>Pink-accent box for announcements, litters, or updates.</span>
+      </button>
+      <button type="button" class="box-option text-preview" data-box="text">
+        <strong>Plain Text</strong>
+        <span>Simple paragraph you can edit inline.</span>
+      </button>
+      <button type="button" class="box-option gallery-preview" data-box="gallery">
+        <strong>Photo Gallery</strong>
+        <span>Scrollable photos with ← → arrows. Add pictures from Photos.</span>
+      </button>
+    </div>
+    <p class="photo-hint" style="margin-top:14px;">Press <strong>Enter</strong> for a small gap between items. <strong>Shift+Enter</strong> for a new line inside text.</p>
+    <button type="button" class="btn btn-ghost" id="spacerBtn" style="width:100%; margin-top:8px;">↵ Add small gap</button>
+    <button type="button" class="btn btn-ghost" id="formatBtn" style="width:100%; margin-top:8px;">✏️ Format selected text</button>
+  </div>
+
+  <div class="drawer" id="resizeDrawer">
+    <div class="drawer-header">
+      <h3>Resize</h3>
+      <button type="button" class="drawer-close" data-close aria-label="Close">✕</button>
+    </div>
+    <p class="photo-hint" id="resizeTargetLabel">Open this panel, then tap a box on the page above to resize it.</p>
+    <div class="resize-controls">
+      <label style="font-size:0.9rem;">Width: <span id="resizeValue">100</span>%</label>
+      <input type="range" id="resizeSlider" min="30" max="100" value="100" />
+      <div class="size-presets">
+        <button type="button" class="btn btn-ghost" data-size="50">Small</button>
+        <button type="button" class="btn btn-ghost" data-size="75">Medium</button>
+        <button type="button" class="btn btn-ghost" data-size="100">Large</button>
+        <button type="button" class="btn btn-ghost" data-size="100-full">Full</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="drawer" id="formatDrawer">
+    <div class="drawer-header">
+      <h3>Format</h3>
+      <button type="button" class="drawer-close" data-close aria-label="Close">✕</button>
+    </div>
+    <p class="photo-hint" id="formatHint">Tap inside a box, select text, then format it below.</p>
+    <div class="box-select-row">
+      <button type="button" class="btn btn-ghost" id="selectHeadingBtn">Box heading</button>
+      <button type="button" class="btn btn-ghost" id="selectTextBtn">Box text</button>
+      <button type="button" class="btn btn-ghost" id="selectBlockBtn">All in box</button>
+    </div>
+    <div class="format-grid">
+      <button class="btn btn-ghost" data-cmd="bold"><b>B</b></button>
+      <button class="btn btn-ghost" data-cmd="italic"><i>I</i></button>
+      <button class="btn btn-ghost" data-cmd="underline"><u>U</u></button>
+      <button class="btn btn-ghost" data-cmd="removeFormat">Clear</button>
+      <button class="btn btn-ghost" data-block="h1">H1</button>
+      <button class="btn btn-ghost" data-block="h2">H2</button>
+      <button class="btn btn-ghost" data-block="h3">H3</button>
+      <button class="btn btn-ghost" data-block="p">Text</button>
+    </div>
+    <div style="margin-top:12px; display:flex; gap:8px; align-items:center;">
+      <label style="font-size:0.9rem;">Color</label>
+      <input type="color" id="textColor" value="#ff5cab" style="width:48px; height:44px; border:none; background:none;" />
+    </div>
+    <div class="font-size-controls" style="margin-top:12px;">
+      <label style="font-size:0.9rem;" for="fontFamilySelect">Font (like Word)</label>
+      <select id="fontFamilySelect" class="font-family-select" aria-label="Font family">
+        <option value="">Site default (Arial)</option>
+        <option value="Arial, Helvetica, sans-serif">Arial</option>
+        <option value="Calibri, Carlito, &quot;Segoe UI&quot;, Arial, sans-serif">Calibri</option>
+        <option value="&quot;Times New Roman&quot;, Times, serif">Times New Roman</option>
+        <option value="Georgia, serif">Georgia</option>
+        <option value="Verdana, Geneva, sans-serif">Verdana</option>
+        <option value="Tahoma, Geneva, sans-serif">Tahoma</option>
+        <option value="&quot;Trebuchet MS&quot;, Helvetica, sans-serif">Trebuchet MS</option>
+        <option value="Cambria, Caladea, Georgia, serif">Cambria</option>
+        <option value="Garamond, &quot;Times New Roman&quot;, serif">Garamond</option>
+        <option value="&quot;Palatino Linotype&quot;, Palatino, serif">Palatino Linotype</option>
+        <option value="&quot;Book Antiqua&quot;, Palatino, serif">Book Antiqua</option>
+        <option value="&quot;Century Gothic&quot;, CenturyGothic, AppleGothic, sans-serif">Century Gothic</option>
+        <option value="&quot;Courier New&quot;, &quot;Courier Prime&quot;, Courier, monospace">Courier New</option>
+        <option value="Consolas, &quot;Courier New&quot;, monospace">Consolas</option>
+        <option value="&quot;Lucida Console&quot;, Monaco, monospace">Lucida Console</option>
+        <option value="&quot;Comic Sans MS&quot;, &quot;Comic Sans&quot;, cursive">Comic Sans MS</option>
+        <option value="Impact, Haettenschweiler, sans-serif">Impact</option>
+      </select>
+    </div>
+    <div class="font-size-controls">
+      <label style="font-size:0.9rem;">Font size: <span id="fontSizeValue">16px</span></label>
+      <input type="range" id="fontSizeSlider" min="12" max="48" value="16" />
+      <div class="size-presets">
+        <button type="button" class="btn btn-ghost" data-font-size="14px">Small</button>
+        <button type="button" class="btn btn-ghost" data-font-size="16px">Normal</button>
+        <button type="button" class="btn btn-ghost" data-font-size="20px">Large</button>
+        <button type="button" class="btn btn-ghost" data-font-size="28px">XL</button>
+      </div>
+    </div>
+    <div class="line-spacing-controls">
+      <label style="font-size:0.9rem;">Line height (within paragraph): <span id="lineSpacingValue">1.25</span></label>
+      <input type="range" id="lineSpacingSlider" min="10" max="16" value="12" step="1" />
+      <div class="size-presets">
+        <button type="button" class="btn btn-ghost" data-line-height="1.1">Tight</button>
+        <button type="button" class="btn btn-ghost" data-line-height="1.25">Normal</button>
+        <button type="button" class="btn btn-ghost" data-line-height="1.35">Loose</button>
+      </div>
+    </div>
+    <div class="line-spacing-controls" style="margin-top:12px;">
+      <label style="font-size:0.9rem;">Gap between paragraphs</label>
+      <div class="size-presets" style="margin-top:8px;">
+        <button type="button" class="btn btn-ghost" data-paragraph-gap="2px 0">Tight</button>
+        <button type="button" class="btn btn-ghost" data-paragraph-gap="6px 0">Normal</button>
+        <button type="button" class="btn btn-ghost" data-paragraph-gap="12px 0">Room</button>
+      </div>
+    </div>
+    <div class="line-spacing-controls" style="margin-top:12px;">
+      <label style="font-size:0.9rem;">Gap between sections</label>
+      <div class="size-presets" style="margin-top:8px;">
+        <button type="button" class="btn btn-ghost" data-section-gap="sm">Small</button>
+        <button type="button" class="btn btn-ghost" data-section-gap="md">Medium</button>
+        <button type="button" class="btn btn-ghost" data-section-gap="lg">Large</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const TOKEN_KEY = 'iggy_editor_token';
+    const DEFAULT_FILE = 'Iggypop.html';
+
+    let currentFile = DEFAULT_FILE;
+    let isCodeMode = false;
+    let isDirty = false;
+    let authToken = sessionStorage.getItem(TOKEN_KEY) || '';
+
+    const loginScreen = document.getElementById('loginScreen');
+    const editorScreen = document.getElementById('editorScreen');
+    const pinInput = document.getElementById('pinInput');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginError = document.getElementById('loginError');
+    const previewFrame = document.getElementById('previewFrame');
+    const codeEditor = document.getElementById('codeEditor');
+    const fileLabel = document.getElementById('fileLabel');
+    const saveStatus = document.getElementById('saveStatus');
+    const toast = document.getElementById('toast');
+    const drawerBackdrop = document.getElementById('drawerBackdrop');
+    const filesDrawer = document.getElementById('filesDrawer');
+    const photosDrawer = document.getElementById('photosDrawer');
+    const boxesDrawer = document.getElementById('boxesDrawer');
+    const resizeDrawer = document.getElementById('resizeDrawer');
+    const formatDrawer = document.getElementById('formatDrawer');
+    const publishDrawer = document.getElementById('publishDrawer');
+    const PROJECT_PREFIX = 'Iggypop 2';
+    let photoInsertMode = 'gallery';
+    let selectedElement = null;
+    let selectedGallery = null;
+    let editorEnhancementsReady = false;
+    let savedSelectionRanges = null;
+
+    function authHeaders() {
+      return authToken ? { Authorization: 'Bearer ' + authToken } : {};
+    }
+
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    function setDirty(dirty) {
+      isDirty = dirty;
+      saveStatus.textContent = dirty ? 'Unsaved' : 'Saved';
+      saveStatus.classList.toggle('unsaved', dirty);
+    }
+
+    function closeDrawers() {
+      filesDrawer.classList.remove('open');
+      publishDrawer.classList.remove('open');
+      photosDrawer.classList.remove('open');
+      boxesDrawer.classList.remove('open');
+      resizeDrawer.classList.remove('open');
+      formatDrawer.classList.remove('open');
+      drawerBackdrop.classList.remove('open', 'resize-passthrough', 'format-passthrough', 'photos-passthrough');
+    }
+
+    function isDrawerOpen(drawer) {
+      return drawer?.classList.contains('open');
+    }
+
+    function handleDrawerClose(e) {
+      const closeBtn = e.target.closest('[data-close]');
+      if (!closeBtn) return;
+      e.preventDefault();
+      e.stopPropagation();
+      closeDrawers();
+    }
+
+    function openDrawer(drawer) {
+      closeDrawers();
+      drawer.classList.add('open');
+      drawerBackdrop.classList.add('open');
+      if (drawer === resizeDrawer || drawer === formatDrawer) {
+        drawerBackdrop.classList.add(drawer === resizeDrawer ? 'resize-passthrough' : 'format-passthrough');
+      }
+      if (drawer === photosDrawer) {
+        drawerBackdrop.classList.add('photos-passthrough');
+      }
+    }
+
+    function cleanEditorArtifacts(doc) {
+      if (!doc) return;
+      doc.querySelectorAll('.editor-selected').forEach(el => el.classList.remove('editor-selected'));
+      doc.querySelectorAll('.gallery-target-selected').forEach(el => el.classList.remove('gallery-target-selected'));
+      doc.querySelectorAll('[data-editor-resizable]').forEach(el => el.removeAttribute('data-editor-resizable'));
+      doc.querySelectorAll('[data-gallery]').forEach(el => el.removeAttribute('data-ready'));
+      doc.querySelectorAll('.gallery-frame[data-editor-swipe]').forEach(el => el.removeAttribute('data-editor-swipe'));
+      doc.querySelectorAll('.photo-gallery-wrap[style]').forEach(wrap => wrap.removeAttribute('style'));
+      doc.body?.removeAttribute('data-gallery-clicks');
+      normalizeTextSpacing(doc);
+      flattenNestedBoxes(doc);
+    }
+
+    function flattenNestedBoxes(doc) {
+      const blockSelector = '.hero, .puppy-box, .photo-gallery-wrap';
+      let moved = true;
+      while (moved) {
+        moved = false;
+        doc.querySelectorAll(blockSelector).forEach(box => {
+          const parent = box.parentElement?.closest(blockSelector);
+          if (parent) {
+            parent.after(box);
+            moved = true;
+          }
+        });
+      }
+    }
+
+    function injectEditorStyles(doc) {
+      let style = doc.getElementById('iggy-editor-styles');
+      if (!style) {
+        style = doc.createElement('style');
+        style.id = 'iggy-editor-styles';
+        doc.head.appendChild(style);
+      }
+      style.textContent = `
+        .content-spacer { min-height: 4px; margin: 2px 0; line-height: 1; padding: 0; }
+        .content-spacer.gap-md { min-height: 8px; margin: 6px 0; }
+        .content-spacer.gap-lg { min-height: 14px; margin: 10px 0; }
+        .hero p, .puppy-box p, .card p { line-height: 1.35; margin: 4px 0; }
+        .hero h2 { margin-bottom: 8px; }
+        .editor-selected { outline: 2px solid #007aff !important; outline-offset: 3px; }
+        .gallery-target-selected { outline: 2px solid #007aff !important; outline-offset: 3px; }
+        body[contenteditable="true"] .hero,
+        body[contenteditable="true"] .puppy-box,
+        body[contenteditable="true"] .card,
+        body[contenteditable="true"] h1,
+        body[contenteditable="true"] h2,
+        body[contenteditable="true"] h3,
+        body[contenteditable="true"] h4,
+        body[contenteditable="true"] p,
+        body[contenteditable="true"] li,
+        body[contenteditable="true"] span {
+          -webkit-user-select: text !important;
+          user-select: text !important;
+          -webkit-touch-callout: default !important;
+          touch-action: auto !important;
+        }
+        body[contenteditable="true"] .hero h1,
+        body[contenteditable="true"] .hero h2,
+        body[contenteditable="true"] .hero h3,
+        body[contenteditable="true"] .hero h4,
+        body[contenteditable="true"] .hero p,
+        body[contenteditable="true"] .puppy-box h1,
+        body[contenteditable="true"] .puppy-box h2,
+        body[contenteditable="true"] .puppy-box h3,
+        body[contenteditable="true"] .puppy-box h4,
+        body[contenteditable="true"] .puppy-box p,
+        body[contenteditable="true"] .card h3,
+        body[contenteditable="true"] .card p {
+          -webkit-user-select: text !important;
+          user-select: text !important;
+          -webkit-touch-callout: default !important;
+          touch-action: auto !important;
+          cursor: text;
+        }
+        body[contenteditable="true"] .hero,
+        body[contenteditable="true"] .puppy-box,
+        body[contenteditable="true"] .card {
+          cursor: text;
+        }
+        ::selection {
+          background: rgba(0, 122, 255, 0.25);
+        }
+        .photo-gallery-wrap { margin: 20px auto; max-width: min(520px, 100%); }
+        .photo-gallery-wrap .photo-gallery { margin: 0; }
+        .photo-gallery { display: block; margin: 0; padding: 0; background: none; border: none; box-shadow: none; }
+        .gallery-frame { position: relative; width: 100%; display: block; text-align: center; border-radius: 14px; overflow: visible; box-shadow: none; }
+        .gallery-slides { position: relative; display: inline-block; width: auto; max-width: 100%; vertical-align: top; text-align: left; background: transparent; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 12px rgba(15,23,42,0.08); }
+        .gallery-slides:has(.gallery-empty) { display: flex; width: 100%; min-height: 200px; align-items: center; justify-content: center; background: #f8fafc; box-shadow: 0 2px 12px rgba(15,23,42,0.08); }
+        .gallery-slide { display: none; width: auto; max-width: 100%; max-height: 340px; height: auto; object-fit: contain; border-radius: 14px; border: none; padding: 0; background: transparent; vertical-align: top; }
+        .gallery-slide.active { display: block; }
+        .gallery-empty { color: #94a3b8; font-style: italic; text-align: center; padding: 24px 12px; font-size: 0.9rem; }
+        .gallery-arrow { position: absolute !important; top: 50% !important; transform: translateY(-50%) !important; z-index: 5 !important; width: 28px; height: 28px; border: none; border-radius: 50%; background: rgba(255,255,255,0.92); color: #db2777; font-size: 0.95rem; font-weight: 600; cursor: pointer; touch-action: manipulation; padding: 0; line-height: 1; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 6px rgba(0,0,0,0.18); }
+        .gallery-prev { left: 10px !important; right: auto !important; }
+        .gallery-next { right: 10px !important; left: auto !important; }
+        .gallery-meta { width: 100%; text-align: center; margin-top: 8px; font-size: 0.8rem; color: #94a3b8; font-weight: 500; }
+        @media (max-width: 900px) {
+          .gallery-slides:has(.gallery-empty) { min-height: 160px; }
+          .gallery-slide { max-height: 260px; }
+          .gallery-arrow { width: 24px; height: 24px; font-size: 0.85rem; }
+          .gallery-prev { left: 8px !important; }
+          .gallery-next { right: 8px !important; }
+        }
+      `;
+    }
+
+    function getResizableTarget(node) {
+      if (!node) return null;
+      const el = node.nodeType === 1 ? node : node.parentElement;
+      return el?.closest('.hero, .puppy-box, .card, .bordered-photo, .photo-gallery-wrap, img:not(.gallery-slide)');
+    }
+
+    function isPhotosMode() {
+      return photosDrawer.classList.contains('open');
+    }
+
+    function getNextGalleryId(doc) {
+      const used = new Set();
+      doc.querySelectorAll('.photo-gallery-wrap[id]').forEach(wrap => used.add(wrap.id));
+      let n = 1;
+      while (used.has('gallery' + n)) n++;
+      return 'gallery' + n;
+    }
+
+    function moveGalleryArrowsIntoSlides(frame) {
+      if (!frame) return;
+      const slides = ensureGallerySlides(frame);
+      if (!slides) return;
+      for (const child of Array.from(frame.children)) {
+        if (child.classList.contains('gallery-prev') || child.classList.contains('gallery-next')) {
+          slides.appendChild(child);
+        }
+      }
+      const gallery = frame.closest('[data-gallery]');
+      if (gallery) {
+        for (const child of Array.from(gallery.children)) {
+          if (child.classList.contains('gallery-prev') || child.classList.contains('gallery-next')) {
+            slides.appendChild(child);
+          }
+        }
+      }
+      const prev = slides.querySelector('.gallery-prev');
+      const next = slides.querySelector('.gallery-next');
+      if (prev) slides.appendChild(prev);
+      if (next) slides.appendChild(next);
+    }
+
+    function ensureGallerySlides(frame) {
+      if (!frame) return null;
+      let slides = null;
+      for (const child of frame.children) {
+        if (child.classList?.contains('gallery-slides')) {
+          slides = child;
+          break;
+        }
+      }
+      if (!slides) {
+        slides = frame.ownerDocument.createElement('div');
+        slides.className = 'gallery-slides';
+        const toMove = [];
+        for (const child of frame.children) {
+          if (child.classList.contains('gallery-slide')
+            || child.classList.contains('gallery-empty')
+            || child.classList.contains('gallery-prev')
+            || child.classList.contains('gallery-next')) {
+            toMove.push(child);
+          }
+        }
+        toMove.forEach(el => slides.appendChild(el));
+        frame.insertBefore(slides, frame.firstChild);
+      }
+      return slides;
+    }
+
+    function normalizeGalleries(doc) {
+      if (!doc) return;
+      doc.querySelectorAll('.photo-gallery-wrap').forEach(wrap => {
+        let gallery = wrap.querySelector('[data-gallery]');
+        if (!gallery) {
+          const inner = wrap.querySelector('.photo-gallery') || doc.createElement('div');
+          if (!inner.classList.contains('photo-gallery')) {
+            inner.className = 'photo-gallery';
+            wrap.insertBefore(inner, wrap.firstChild);
+          }
+          inner.setAttribute('data-gallery', '');
+          gallery = inner;
+        }
+
+        if (!gallery.querySelector('.gallery-frame')) {
+          const frame = doc.createElement('div');
+          frame.className = 'gallery-frame';
+          const slides = doc.createElement('div');
+          slides.className = 'gallery-slides';
+          const empty = doc.createElement('p');
+          empty.className = 'gallery-empty';
+          empty.textContent = 'Add photos from the editor';
+          slides.appendChild(empty);
+          frame.appendChild(slides);
+          gallery.appendChild(frame);
+        }
+
+        const frame = gallery.querySelector('.gallery-frame');
+        ensureGallerySlides(frame);
+        moveGalleryArrowsIntoSlides(frame);
+
+        if (!wrap.querySelector('.gallery-meta')) {
+          const counter = doc.createElement('div');
+          counter.className = 'gallery-meta';
+          counter.textContent = '0 / 0';
+          wrap.appendChild(counter);
+        }
+
+        if (!wrap.id) wrap.id = getNextGalleryId(doc);
+        updateGalleryCounterInDoc(gallery);
+      });
+    }
+
+    function selectGallery(gallery) {
+      if (!gallery) return;
+      const doc = gallery.ownerDocument;
+      doc.querySelectorAll('.gallery-target-selected').forEach(el => el.classList.remove('gallery-target-selected'));
+      const wrap = gallery.closest('.photo-gallery-wrap') || gallery;
+      wrap.classList.add('gallery-target-selected');
+      selectedGallery = gallery;
+      refreshGalleryUI();
+      const name = wrap.id || getGalleryLabel(gallery, 0);
+      showToast(name + ' selected for photos');
+    }
+
+    function getGalleryFromTarget(node) {
+      if (!node) return null;
+      const el = node.nodeType === 1 ? node : node.parentElement;
+      return el?.closest('[data-gallery]') || null;
+    }
+
+    function showGallerySlide(gallery, nextIndex) {
+      const slides = gallery.querySelectorAll('.gallery-slide');
+      if (!slides.length) return;
+      const index = (nextIndex + slides.length) % slides.length;
+      slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
+      updateGalleryCounterInDoc(gallery);
+    }
+
+    function setupGalleryNavigation(doc) {
+      doc.querySelectorAll('[data-gallery]').forEach(gallery => {
+        const frame = gallery.querySelector('.gallery-frame');
+        if (!frame || frame.dataset.editorSwipe) return;
+        frame.dataset.editorSwipe = 'true';
+
+        let touchStartX = 0;
+        frame.addEventListener('touchstart', (e) => {
+          touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        frame.addEventListener('touchend', (e) => {
+          const delta = e.changedTouches[0].screenX - touchStartX;
+          if (Math.abs(delta) < 40) return;
+          const slides = gallery.querySelectorAll('.gallery-slide');
+          const activeIndex = Array.from(slides).findIndex(s => s.classList.contains('active'));
+          showGallerySlide(gallery, activeIndex + (delta < 0 ? 1 : -1));
+        }, { passive: true });
+      });
+
+      if (doc.body.dataset.galleryClicks) return;
+      doc.body.dataset.galleryClicks = 'true';
+
+      doc.addEventListener('click', (e) => {
+        const prev = e.target.closest('.gallery-prev');
+        const next = e.target.closest('.gallery-next');
+        if (!prev && !next) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const gallery = (prev || next).closest('[data-gallery]');
+        if (!gallery) return;
+        const slides = gallery.querySelectorAll('.gallery-slide');
+        const activeIndex = Array.from(slides).findIndex(s => s.classList.contains('active'));
+        showGallerySlide(gallery, activeIndex + (next ? 1 : -1));
+      });
+    }
+
+    function selectElement(el) {
+      const doc = previewFrame.contentDocument;
+      if (!doc || !el) return;
+      cleanEditorArtifacts(doc);
+      selectedElement = el;
+      el.classList.add('editor-selected');
+      el.setAttribute('data-editor-resizable', '');
+
+      const gallery = getGalleryFromTarget(el) || (el.matches?.('[data-gallery]') ? el : el.querySelector?.('[data-gallery]'));
+      if (gallery) {
+        selectedGallery = gallery;
+      } else if (el.classList.contains('photo-gallery-wrap')) {
+        selectedGallery = el.querySelector('[data-gallery]');
+      }
+
+      updateResizeControls(el);
+      refreshGalleryUI();
+    }
+
+    function updateResizeControls(el) {
+      const label = document.getElementById('resizeTargetLabel');
+      const slider = document.getElementById('resizeSlider');
+      const value = document.getElementById('resizeValue');
+      if (!el) {
+        label.textContent = 'Tap a photo or text box on the page first.';
+        return;
+      }
+      const name = el.classList.contains('hero') ? 'Text box'
+        : el.classList.contains('puppy-box') ? 'Notice box'
+        : el.classList.contains('card') ? 'Card'
+        : el.classList.contains('photo-gallery-wrap') ? 'Gallery'
+        : el.tagName === 'IMG' ? 'Photo' : 'Item';
+      label.textContent = `Resizing: ${name}`;
+      const inlineWidth = parseInt(el.style.width, 10);
+      const width = Number.isFinite(inlineWidth) ? inlineWidth : 100;
+      slider.value = Math.min(100, Math.max(30, width));
+      value.textContent = slider.value;
+    }
+
+    function applyResizeStyles(el, percent, fullWidth) {
+      const value = fullWidth ? '100%' : `${percent}%`;
+      el.style.setProperty('width', value, 'important');
+      el.style.setProperty('max-width', value, 'important');
+      el.style.setProperty('box-sizing', 'border-box', 'important');
+
+      if (el.tagName === 'IMG' || el.classList.contains('hero') || el.classList.contains('puppy-box') ||
+          el.classList.contains('card') || el.classList.contains('photo-gallery-wrap') || el.classList.contains('bordered-photo')) {
+        el.style.setProperty('display', 'block', 'important');
+        el.style.setProperty('margin-left', 'auto', 'important');
+        el.style.setProperty('margin-right', 'auto', 'important');
+      }
+
+      if (el.tagName === 'IMG') {
+        el.style.setProperty('height', 'auto', 'important');
+      }
+    }
+
+    function applyResize(percent, fullWidth) {
+      if (!selectedElement) {
+        showToast('Tap a box on the page first');
+        return;
+      }
+      const doc = previewFrame.contentDocument;
+      if (!doc || !doc.contains(selectedElement)) {
+        selectedElement = null;
+        showToast('Tap a box on the page first');
+        return;
+      }
+
+      applyResizeStyles(selectedElement, percent, fullWidth);
+      document.getElementById('resizeValue').textContent = fullWidth ? '100' : percent;
+      document.getElementById('resizeSlider').value = fullWidth ? 100 : percent;
+      syncFromPreview();
+      selectedElement.classList.add('editor-selected');
+      setDirty(true);
+    }
+
+    function insertSpacer(doc, gapSize = 'sm') {
+      const spacer = doc.createElement('p');
+      spacer.className = 'content-spacer';
+      if (gapSize === 'md') spacer.classList.add('gap-md');
+      if (gapSize === 'lg') spacer.classList.add('gap-lg');
+      return spacer;
+    }
+
+    function getBlockInsertPoint(doc) {
+      const selection = doc.getSelection();
+      if (!selection?.rangeCount) return null;
+      const range = selection.getRangeAt(0);
+      const container = range.startContainer;
+      const parentEl = container.nodeType === 3 ? container.parentElement : container;
+      return parentEl?.closest(
+        'p, h2, h3, h4, .hero, .puppy-box, .card, .content-spacer, .photo-gallery-wrap, img.bordered-photo, .bordered-photo'
+      );
+    }
+
+    function insertSectionGap(gapSize = 'sm') {
+      const doc = getPreviewDoc();
+      if (!doc) return;
+      const spacer = insertSpacer(doc, gapSize);
+      const insertAfter = getBlockInsertPoint(doc);
+      if (insertAfter?.parentNode) {
+        insertAfter.parentNode.insertBefore(spacer, insertAfter.nextSibling);
+      } else {
+        const activePage = doc.querySelector('.page.active') || doc.body;
+        activePage.appendChild(spacer);
+      }
+      const selection = doc.getSelection();
+      if (selection) {
+        const range = doc.createRange();
+        range.setStartAfter(spacer);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+      syncFromPreview();
+      setDirty(true);
+      showToast(gapSize === 'lg' ? 'Large gap added' : gapSize === 'md' ? 'Medium gap added' : 'Small gap added');
+    }
+
+    function insertSpacerAtCursor() {
+      insertSectionGap('sm');
+    }
+
+    function isResizeMode() {
+      return resizeDrawer.classList.contains('open');
+    }
+
+    function isFormatMode() {
+      return formatDrawer.classList.contains('open');
+    }
+
+    function savePreviewSelection() {
+      const doc = previewFrame.contentDocument;
+      if (!doc) return;
+      const sel = doc.getSelection();
+      if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+
+      savedSelectionRanges = [];
+      for (let i = 0; i < sel.rangeCount; i++) {
+        savedSelectionRanges.push(sel.getRangeAt(i).cloneRange());
+      }
+      updateFormatHint();
+    }
+
+    function restorePreviewSelection() {
+      const doc = previewFrame.contentDocument;
+      if (!doc || !savedSelectionRanges?.length) return false;
+
+      const sel = doc.getSelection();
+      if (!sel) return false;
+
+      sel.removeAllRanges();
+      savedSelectionRanges.forEach(range => {
+        try {
+          sel.addRange(range);
+        } catch (_) {}
+      });
+      return sel.rangeCount > 0 && !sel.isCollapsed;
+    }
+
+    function updateFormatHint() {
+      const hint = document.getElementById('formatHint');
+      if (!hint) return;
+      hint.textContent = savedSelectionRanges?.length
+        ? 'Text selected — use line height for wrapped lines, gap buttons for space between paragraphs or sections.'
+        : 'Tap inside a paragraph. Use gap buttons for space between lines or sections — not headings.';
+    }
+
+    function openFormatDrawer() {
+      if (isDrawerOpen(formatDrawer)) {
+        closeDrawers();
+        return;
+      }
+      savePreviewSelection();
+      ensureDocumentMode();
+      openDrawer(formatDrawer);
+      updateFormatHint();
+    }
+
+    function getSelectionElement(doc) {
+      const sel = doc.getSelection();
+      const node = sel?.anchorNode;
+      return node?.nodeType === 3 ? node.parentElement : node;
+    }
+
+    function getActiveBox(el) {
+      return el?.closest?.('.hero, .puppy-box, .card') || null;
+    }
+
+    function getEditableBlock(el) {
+      if (!el) return null;
+      return el.closest('h1, h2, h3, h4, p, li') || getActiveBox(el);
+    }
+
+    function selectElementContents(doc, element, label) {
+      if (!element) {
+        showToast('Tap inside a box first');
+        return false;
+      }
+
+      const sel = doc.getSelection();
+      if (!sel) return false;
+
+      const range = doc.createRange();
+      range.selectNodeContents(element);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      savePreviewSelection();
+      updateFormatHint();
+      showToast(label + ' selected');
+      return true;
+    }
+
+    function selectBoxPart(part) {
+      const doc = previewFrame.contentDocument;
+      if (!doc) return;
+
+      doc.body.focus();
+      restorePreviewSelection();
+
+      const el = getSelectionElement(doc);
+      const box = getActiveBox(el);
+      let target = null;
+
+      if (part === 'heading') {
+        target = el?.closest('h1, h2, h3, h4') || box?.querySelector('h1, h2, h3, h4');
+      } else if (part === 'text') {
+        target = el?.closest('p') || box?.querySelector('p');
+      } else {
+        target = box || getEditableBlock(el);
+      }
+
+      selectElementContents(doc, target, part === 'heading' ? 'Box heading' : part === 'text' ? 'Box text' : 'Box');
+    }
+
+    function selectCurrentBlock() {
+      selectBoxPart('all');
+    }
+
+    function setupEditorEnhancements(doc) {
+      if (!doc || editorEnhancementsReady) return;
+      editorEnhancementsReady = true;
+
+      doc.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('.gallery-arrow, .menu-toggle, .nav-backdrop, .side-nav a, input, textarea, button, select, label')) {
+          const galleryEl = getGalleryFromTarget(e.target);
+          if (galleryEl) selectGallery(galleryEl);
+          return;
+        }
+
+        const galleryEl = getGalleryFromTarget(e.target);
+        if (galleryEl && isPhotosMode()) {
+          selectGallery(galleryEl);
+          return;
+        }
+
+        if (!isResizeMode()) return;
+        const target = getResizableTarget(e.target);
+        if (target) selectElement(target);
+      });
+
+      doc.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        if (e.shiftKey) return;
+
+        const selection = doc.getSelection();
+        if (!selection || !selection.rangeCount) return;
+
+        const range = selection.getRangeAt(0);
+        const container = range.startContainer;
+        const parentEl = container.nodeType === 3 ? container.parentElement : container;
+        const block = parentEl?.closest('p, h2, h3, h4, .hero, .puppy-box, .content-spacer');
+
+        if (block && ['P', 'H2', 'H3', 'H4'].includes(block.tagName) && !block.classList.contains('content-spacer')) {
+          const text = block.textContent || '';
+          if (range.startOffset > 0 && range.startOffset < text.length) {
+            e.preventDefault();
+            doc.execCommand('insertLineBreak');
+            syncFromPreview();
+            setDirty(true);
+            return;
+          }
+        }
+
+        e.preventDefault();
+        const spacer = insertSpacer(doc, 'sm');
+        const insertAfter = block || parentEl?.closest('.hero, .puppy-box, .bordered-photo, .photo-gallery-wrap, img') || parentEl;
+        if (insertAfter?.parentNode) {
+          insertAfter.parentNode.insertBefore(spacer, insertAfter.nextSibling);
+        } else {
+          range.collapse(false);
+          range.insertNode(spacer);
+        }
+        range.setStartAfter(spacer);
+        range.setEndAfter(spacer);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        syncFromPreview();
+        setDirty(true);
+      });
+
+      doc.addEventListener('input', () => {
+        syncFromPreview();
+        setDirty(true);
+      });
+
+      doc.addEventListener('selectionchange', () => {
+        savePreviewSelection();
+      });
+    }
+
+    function normalizeContentSpacers(doc) {
+      if (!doc) return;
+      doc.querySelectorAll('.content-spacer').forEach(el => {
+        if (!el.querySelector('img, button, input, textarea, [data-gallery]')) {
+          el.innerHTML = '';
+        }
+      });
+    }
+
+    function normalizeTextSpacing(doc) {
+      if (!doc) return;
+      doc.querySelectorAll('.hero, .puppy-box, .card, h1, h2, h3, h4').forEach(el => {
+        el.style.removeProperty('line-height');
+      });
+    }
+
+    function setupPreviewDocument(doc) {
+      if (!doc?.body) return;
+      injectEditorStyles(doc);
+      doc.body.contentEditable = 'true';
+      doc.body.spellcheck = true;
+      doc.body.style.outline = 'none';
+      doc.body.style.overflowX = 'hidden';
+      normalizeContentSpacers(doc);
+      normalizeTextSpacing(doc);
+      normalizeGalleries(doc);
+      setupGalleryNavigation(doc);
+      setupEditorEnhancements(doc);
+    }
+
+    function resetEditorEnhancements() {
+      editorEnhancementsReady = false;
+      selectedElement = null;
+      selectedGallery = null;
+    }
+
+    function getPreviewDoc() {
+      if (!currentFile.endsWith('.html')) return null;
+      ensureDocumentMode();
+      return previewFrame.contentDocument;
+    }
+
+    function isPageLevelBlock(node) {
+      if (!node || node.nodeType !== 1) return false;
+      return node.classList.contains('hero')
+        || node.classList.contains('puppy-box')
+        || node.classList.contains('photo-gallery-wrap')
+        || (node.tagName === 'IMG' && node.classList.contains('bordered-photo'));
+    }
+
+    function getBlockInsertLocation(doc, contextEl) {
+      const activePage = doc.querySelector('.page.active') || doc.querySelector('.content') || doc.body;
+      const blockContainer = contextEl?.closest('.hero, .puppy-box, .card, .bordered-photo, .photo-gallery-wrap');
+      if (blockContainer?.parentNode) {
+        return { parent: blockContainer.parentNode, before: blockContainer.nextSibling };
+      }
+
+      const textBlock = contextEl?.closest('p, h2, h3, h4');
+      if (textBlock?.parentNode && activePage.contains(textBlock)) {
+        return { parent: textBlock.parentNode, before: textBlock.nextSibling };
+      }
+
+      return { parent: activePage, before: null };
+    }
+
+    function insertNodeIntoPage(node) {
+      const doc = getPreviewDoc();
+      if (!doc) {
+        showToast('Open Iggypop.html to add boxes');
+        return false;
+      }
+
+      const activePage = doc.querySelector('.page.active') || doc.querySelector('.content');
+      const selection = doc.getSelection();
+
+      if (isPageLevelBlock(node)) {
+        let location = { parent: activePage || doc.body, before: null };
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          const container = range.startContainer;
+          const contextEl = container.nodeType === 3 ? container.parentElement : container;
+          location = getBlockInsertLocation(doc, contextEl);
+        }
+        location.parent.insertBefore(node, location.before);
+      } else if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        range.collapse(false);
+        range.insertNode(node);
+      } else if (activePage) {
+        activePage.appendChild(node);
+      } else {
+        doc.body.appendChild(node);
+      }
+
+      if (selection) {
+        const range = doc.createRange();
+        range.setStartAfter(node);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+
+      syncFromPreview();
+      setDirty(true);
+      return true;
+    }
+
+    function createTextBox(type) {
+      const doc = getPreviewDoc();
+      if (!doc) return null;
+
+      if (type === 'hero') {
+        const box = doc.createElement('div');
+        box.className = 'hero';
+        const heading = doc.createElement('h2');
+        heading.textContent = 'New heading';
+        const text = doc.createElement('p');
+        text.textContent = 'Tap to edit this text.';
+        box.appendChild(heading);
+        box.appendChild(text);
+        return box;
+      }
+
+      if (type === 'notice') {
+        const box = doc.createElement('div');
+        box.className = 'puppy-box';
+        const heading = doc.createElement('h3');
+        heading.textContent = 'New notice';
+        const text = doc.createElement('p');
+        text.textContent = 'Tap to edit this text.';
+        box.appendChild(heading);
+        box.appendChild(text);
+        return box;
+      }
+
+      const text = doc.createElement('p');
+      text.textContent = 'Tap to edit this text.';
+      return text;
+    }
+
+    function addTextBox(type) {
+      if (type === 'gallery') {
+        insertNewGallery();
+        return;
+      }
+      const node = createTextBox(type);
+      if (!node) {
+        showToast('Wait for the page to load');
+        return;
+      }
+      if (insertNodeIntoPage(node)) {
+        closeDrawers();
+        showToast('Text box added — tap Save');
+        try {
+          node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } catch (_) {}
+      }
+    }
+
+    async function checkAuth() {
+      if (!authToken) return false;
+      const res = await fetch('/api/auth/status', { headers: authHeaders() });
+      if (!res.ok) {
+        authToken = '';
+        sessionStorage.removeItem(TOKEN_KEY);
+        return false;
+      }
+      return true;
+    }
+
+    async function login() {
+      loginError.textContent = '';
+      const pin = pinInput.value.trim();
+      if (!pin) {
+        loginError.textContent = 'Enter your PIN';
+        return;
+      }
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        loginError.textContent = data.error || 'Wrong PIN';
+        return;
+      }
+      authToken = data.token;
+      sessionStorage.setItem(TOKEN_KEY, authToken);
+      loginScreen.classList.remove('active');
+      editorScreen.classList.add('active');
+      await initEditor();
+    }
+
+    async function refreshFiles() {
+      const res = await fetch('/api/files', { headers: authHeaders() });
+      const files = await res.json();
+      const list = document.getElementById('fileList');
+      list.innerHTML = '';
+      files.filter(f => /\.(html|css|js|jpg|jpeg|png|gif|heic|heif)$/i.test(f)).forEach(f => {
+        const li = document.createElement('li');
+        li.textContent = f;
+        if (f === currentFile) li.classList.add('active');
+        li.addEventListener('click', () => {
+          loadFile(f);
+          closeDrawers();
+        });
+        list.appendChild(li);
+      });
+    }
+
+    async function loadFile(name) {
+      currentFile = name;
+      fileLabel.textContent = name;
+      const res = await fetch('/api/file?path=' + encodeURIComponent(name), { headers: authHeaders() });
+      if (!res.ok) {
+        showToast('Could not load file');
+        return;
+      }
+      const data = await res.json();
+      codeEditor.value = data.content;
+      setDirty(false);
+      await refreshFiles();
+
+      if (name.endsWith('.html') && !isCodeMode) {
+        showDocumentMode(true);
+      } else {
+        showCodeMode();
+      }
+    }
+
+    function ensureDocumentMode() {
+      if (isCodeMode) showDocumentMode();
+    }
+
+    function showDocumentMode(forceReload = false) {
+      isCodeMode = false;
+      previewFrame.style.display = 'block';
+      codeEditor.classList.remove('visible');
+
+      const needsReload = forceReload || !previewFrame.src || !previewFrame.contentDocument?.body;
+      if (!needsReload) {
+        setupPreviewDocument(previewFrame.contentDocument);
+        return;
+      }
+
+      resetEditorEnhancements();
+      previewFrame.src = '/preview?file=' + encodeURIComponent(currentFile) + '&t=' + Date.now();
+      previewFrame.onload = () => {
+        const doc = previewFrame.contentDocument;
+        if (!doc) return;
+        const viewport = doc.querySelector('meta[name="viewport"]');
+        if (viewport) {
+          viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, viewport-fit=cover');
+        }
+        setupPreviewDocument(doc);
+      };
+    }
+
+    function showCodeMode() {
+      isCodeMode = true;
+      previewFrame.style.display = 'none';
+      codeEditor.classList.add('visible');
+    }
+
+    function syncFromPreview() {
+      const doc = previewFrame.contentDocument;
+      if (!doc) return;
+      cleanEditorArtifacts(doc);
+      const bodyHtml = doc.body.innerHTML;
+      codeEditor.value = codeEditor.value.replace(
+        /(<body[^>]*>)[\s\S]*?(<\/body>)/i,
+        '$1' + bodyHtml + '$2'
+      );
+    }
+
+    async function saveFile() {
+      if (isCodeMode === false) syncFromPreview();
+      const res = await fetch('/api/file', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ path: currentFile, content: codeEditor.value })
+      });
+      if (res.ok) {
+        setDirty(false);
+        showToast('Saved!');
+        if (!isCodeMode) showDocumentMode(true);
+        return true;
+      } else {
+        showToast('Save failed');
+        return false;
+      }
+    }
+
+    async function loadPublishConfig() {
+      const res = await fetch('/api/publish/config', { headers: authHeaders() });
+      if (!res.ok) return;
+      const data = await res.json();
+      document.getElementById('ftpHost').value = data.host || 'ftp-a5349bf4.registeredsite.com';
+      document.getElementById('ftpUser').value = data.user || 'myoukilis';
+      document.getElementById('ftpRemoteDir').value = data.remote_dir || 'public_html';
+      const status = document.getElementById('publishStatus');
+      status.textContent = data.configured
+        ? 'FTP is set up. Tap Publish website now after you Save changes.'
+        : 'Enter your Network Solutions FTP details below.';
+    }
+
+    async function saveFtpSettings() {
+      const res = await fetch('/api/publish/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({
+          host: document.getElementById('ftpHost').value.trim(),
+          user: document.getElementById('ftpUser').value.trim(),
+          password: document.getElementById('ftpPassword').value,
+          remote_dir: document.getElementById('ftpRemoteDir').value.trim() || 'public_html',
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(data.error || 'Could not save FTP settings');
+        return false;
+      }
+      document.getElementById('ftpPassword').value = '';
+      document.getElementById('publishStatus').textContent = 'FTP saved. You can publish from your phone now.';
+      showToast('FTP settings saved');
+      return true;
+    }
+
+    async function publishWebsite() {
+      if (currentFile !== DEFAULT_FILE) {
+        showToast('Open Iggypop.html to publish');
+        return;
+      }
+      if (isDirty) {
+        const saved = await saveFile();
+        if (!saved) return;
+      }
+
+      const password = document.getElementById('ftpPassword').value;
+      const status = document.getElementById('publishStatus');
+      if (!password && !(await fetch('/api/publish/config', { headers: authHeaders() }).then(r => r.json())).configured) {
+        status.textContent = 'Enter your FTP password below, then tap Publish again.';
+        showToast('FTP password required');
+        return;
+      }
+
+      const publishBtn = document.getElementById('publishNowBtn');
+      const original = publishBtn.textContent;
+      publishBtn.disabled = true;
+      publishBtn.textContent = 'Publishing…';
+      try {
+        const res = await fetch('/api/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({
+            host: document.getElementById('ftpHost').value.trim(),
+            user: document.getElementById('ftpUser').value.trim(),
+            password,
+            remote_dir: document.getElementById('ftpRemoteDir').value.trim() || 'public_html',
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          status.textContent = data.error || 'Publish failed';
+          showToast(data.error || 'Publish failed');
+          return;
+        }
+        document.getElementById('ftpPassword').value = '';
+        status.textContent = `Published to ${data.domain || 'iggypopm.com'} (${data.images || 0} images).`;
+        showToast('Published to iggypopm.com!');
+      } catch (err) {
+        status.textContent = 'Publish failed — check your Mac is running the editor.';
+        showToast('Publish failed');
+      } finally {
+        publishBtn.disabled = false;
+        publishBtn.textContent = original;
+      }
+    }
+
+    function format(cmd, value) {
+      const doc = previewFrame.contentDocument;
+      if (!doc) {
+        showToast('Wait for the page to load');
+        return;
+      }
+
+      doc.body.focus();
+      const hasSelection = restorePreviewSelection();
+      const needsSelection = ['bold', 'italic', 'underline', 'removeFormat', 'foreColor', 'hiliteColor'].includes(cmd);
+
+      if (needsSelection && !hasSelection) {
+        showToast('Tap Box heading/text or highlight words first');
+        return;
+      }
+
+      if (cmd === 'formatBlock') {
+        const sel = doc.getSelection();
+        if (!hasSelection && (!sel || sel.rangeCount === 0)) {
+          showToast('Tap inside box text first');
+          return;
+        }
+      }
+
+      doc.execCommand('styleWithCSS', false, true);
+      let applied = doc.execCommand(cmd, false, value || null);
+
+      if (!applied && needsSelection && hasSelection) {
+        applied = applyTextCommand(cmd, value);
+      }
+
+      if (!applied) {
+        showToast('Could not apply formatting');
+        return;
+      }
+
+      savePreviewSelection();
+      syncFromPreview();
+      setDirty(true);
+      showToast('Formatting applied');
+    }
+
+    function applyTextCommand(cmd, value) {
+      const doc = previewFrame.contentDocument;
+      const target = getFormatTarget(doc);
+      if (!target || target.type !== 'range') return false;
+
+      const tagMap = {
+        bold: 'strong',
+        italic: 'em',
+        underline: 'u',
+      };
+
+      if (tagMap[cmd]) {
+        return wrapRange(target.range, doc.createElement(tagMap[cmd]));
+      }
+
+      if (cmd === 'foreColor' && value) {
+        const span = doc.createElement('span');
+        span.style.setProperty('color', value, 'important');
+        return wrapRange(target.range, span);
+      }
+
+      if (cmd === 'removeFormat') {
+        const text = target.range.toString();
+        target.range.deleteContents();
+        target.range.insertNode(doc.createTextNode(text));
+        return true;
+      }
+
+      return false;
+    }
+
+    function wrapRange(range, wrapper) {
+      try {
+        range.surroundContents(wrapper);
+      } catch (_) {
+        const contents = range.extractContents();
+        wrapper.appendChild(contents);
+        range.insertNode(wrapper);
+      }
+      return true;
+    }
+
+    function setStyleProperty(el, property, value) {
+      const cssName = property.replace(/[A-Z]/g, letter => '-' + letter.toLowerCase());
+      el.style.setProperty(cssName, value, 'important');
+    }
+
+    function getParagraphBlock(el) {
+      if (!el) return null;
+      const p = el.closest('p');
+      if (p && !p.classList.contains('content-spacer')) return p;
+      return null;
+    }
+
+    function getFormatTarget(doc) {
+      const sel = doc.getSelection();
+      if (!sel || sel.rangeCount === 0) return null;
+
+      if (!sel.isCollapsed) {
+        return { type: 'range', range: sel.getRangeAt(0) };
+      }
+
+      const block = getEditableBlock(getSelectionElement(doc));
+      if (block) return { type: 'block', block };
+      return null;
+    }
+
+    function applyInlineStyle(property, value, label) {
+      const doc = previewFrame.contentDocument;
+      if (!doc) {
+        showToast('Wait for the page to load');
+        return;
+      }
+
+      doc.body.focus();
+      restorePreviewSelection();
+
+      const target = getFormatTarget(doc);
+      if (!target) {
+        showToast('Tap inside a box or highlight text first');
+        return;
+      }
+
+      if (target.type === 'range') {
+        const span = doc.createElement('span');
+        setStyleProperty(span, property, value);
+        wrapRange(target.range, span);
+        const sel = doc.getSelection();
+        sel?.removeAllRanges();
+        const newRange = doc.createRange();
+        newRange.selectNodeContents(span);
+        sel?.addRange(newRange);
+      } else {
+        setStyleProperty(target.block, property, value);
+      }
+
+      savePreviewSelection();
+      syncFromPreview();
+      setDirty(true);
+      showToast(label + ' updated');
+    }
+
+    function applyFontFamily(fontStack) {
+      const doc = previewFrame.contentDocument;
+      if (!doc) {
+        showToast('Wait for the page to load');
+        return;
+      }
+
+      doc.body.focus();
+      restorePreviewSelection();
+
+      const target = getFormatTarget(doc);
+      if (!target) {
+        showToast('Tap inside text or highlight words first');
+        return;
+      }
+
+      if (target.type === 'range') {
+        if (!fontStack) {
+          showToast('Highlight text to reset its font');
+          return;
+        }
+        const span = doc.createElement('span');
+        setStyleProperty(span, 'fontFamily', fontStack);
+        wrapRange(target.range, span);
+      } else {
+        const block = target.block;
+        if (!block.matches('h1, h2, h3, h4, p, li')) {
+          showToast('Select heading or paragraph text first');
+          return;
+        }
+        if (fontStack) {
+          setStyleProperty(block, 'fontFamily', fontStack);
+        } else {
+          block.style.removeProperty('font-family');
+        }
+      }
+
+      savePreviewSelection();
+      syncFromPreview();
+      setDirty(true);
+      showToast(fontStack ? 'Font updated' : 'Font reset to site default');
+    }
+
+    function applyFontSize(size) {
+      const doc = previewFrame.contentDocument;
+      if (!doc) {
+        showToast('Wait for the page to load');
+        return;
+      }
+
+      doc.body.focus();
+      restorePreviewSelection();
+
+      const target = getFormatTarget(doc);
+      if (!target) {
+        showToast('Tap inside text or highlight words first');
+        return;
+      }
+
+      if (target.type === 'range') {
+        const span = doc.createElement('span');
+        setStyleProperty(span, 'fontSize', size);
+        wrapRange(target.range, span);
+      } else {
+        const block = target.block;
+        if (block.matches('h1, h2, h3, h4, p, li')) {
+          setStyleProperty(block, 'fontSize', size);
+        } else {
+          showToast('Select heading or paragraph text first');
+          return;
+        }
+      }
+
+      savePreviewSelection();
+      syncFromPreview();
+      setDirty(true);
+      showToast('Font size updated');
+      document.getElementById('fontSizeValue').textContent = size;
+      document.getElementById('fontSizeSlider').value = parseInt(size, 10) || 16;
+    }
+
+    function applyLineSpacing(value) {
+      const doc = previewFrame.contentDocument;
+      if (!doc) {
+        showToast('Wait for the page to load');
+        return;
+      }
+
+      const numeric = Math.min(1.5, Math.max(1.0, parseFloat(value) || 1.25));
+      const lineHeight = String(numeric);
+
+      doc.body.focus();
+      restorePreviewSelection();
+
+      const target = getFormatTarget(doc);
+      if (target?.type === 'range') {
+        const span = doc.createElement('span');
+        setStyleProperty(span, 'lineHeight', lineHeight);
+        wrapRange(target.range, span);
+      } else {
+        const el = getSelectionElement(doc);
+        const paragraph = getParagraphBlock(el);
+        if (!paragraph) {
+          showToast('Tap inside a paragraph — not a heading');
+          return;
+        }
+        setStyleProperty(paragraph, 'lineHeight', lineHeight);
+      }
+
+      savePreviewSelection();
+      syncFromPreview();
+      setDirty(true);
+      document.getElementById('lineSpacingValue').textContent = lineHeight;
+      document.getElementById('lineSpacingSlider').value = Math.round(numeric * 10);
+      showToast('Line height updated');
+    }
+
+    function applyParagraphGap(margin) {
+      const doc = previewFrame.contentDocument;
+      if (!doc) {
+        showToast('Wait for the page to load');
+        return;
+      }
+
+      doc.body.focus();
+      const el = getSelectionElement(doc);
+      const paragraph = getParagraphBlock(el);
+      if (!paragraph) {
+        showToast('Tap inside a paragraph first');
+        return;
+      }
+
+      setStyleProperty(paragraph, 'margin', margin);
+      syncFromPreview();
+      setDirty(true);
+      showToast('Paragraph gap updated');
+    }
+
+    function imageSrc(imagePath) {
+      return imagePath.includes('/') ? imagePath : `${PROJECT_PREFIX}/${imagePath}`;
+    }
+
+    function findTargetGallery(doc) {
+      if (selectedGallery && doc.contains(selectedGallery)) {
+        return selectedGallery;
+      }
+
+      const galleries = Array.from(doc.querySelectorAll('[data-gallery]'));
+      if (galleries.length === 1) return galleries[0];
+
+      if (galleries.length > 1) {
+        showToast('Tap a gallery on the page or pick one under Add photos to');
+        refreshGalleryUI();
+        return null;
+      }
+
+      return null;
+    }
+
+    function getGalleryLabel(gallery, index) {
+      const wrap = gallery.closest('.photo-gallery-wrap');
+      if (wrap?.id) {
+        const slides = gallery.querySelectorAll('.gallery-slide').length;
+        return `${wrap.id} (${slides} photo${slides !== 1 ? 's' : ''})`;
+      }
+      const page = gallery.closest('.page');
+      const pageName = page?.querySelector('.hero h2, .hero h1')?.textContent?.trim()
+        || page?.id
+        || 'Page';
+      const slides = gallery.querySelectorAll('.gallery-slide').length;
+      return `Gallery ${index + 1} on ${pageName} (${slides} photo${slides !== 1 ? 's' : ''})`;
+    }
+
+    function refreshGalleryUI() {
+      const doc = getPreviewDoc();
+      const targetSection = document.getElementById('galleryTargetSection');
+      const targetList = document.getElementById('galleryTargetList');
+      const manageSection = document.getElementById('galleryManageSection');
+      const manageLabel = document.getElementById('galleryManageLabel');
+
+      if (!doc || photoInsertMode !== 'gallery') {
+        targetSection.style.display = 'none';
+        manageSection.style.display = 'none';
+        return;
+      }
+
+      const galleries = Array.from(doc.querySelectorAll('[data-gallery]'));
+      targetList.innerHTML = '';
+
+      if (galleries.length) {
+        targetSection.style.display = 'block';
+        galleries.forEach((gallery, i) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'gallery-target' + (gallery === selectedGallery ? ' active' : '');
+          btn.textContent = getGalleryLabel(gallery, i);
+          btn.addEventListener('click', () => selectGallery(gallery));
+          targetList.appendChild(btn);
+        });
+
+        if (!selectedGallery || !doc.contains(selectedGallery)) {
+          selectedGallery = null;
+        }
+      } else {
+        targetSection.style.display = 'block';
+        targetList.innerHTML = '<p class="photo-hint">No galleries yet — add one with + Box → Photo Gallery</p>';
+      }
+
+      if (selectedGallery && doc.contains(selectedGallery)) {
+        manageSection.style.display = 'grid';
+        const slides = selectedGallery.querySelectorAll('.gallery-slide').length;
+        const idx = galleries.indexOf(selectedGallery);
+        manageLabel.textContent = `${getGalleryLabel(selectedGallery, idx >= 0 ? idx : 0)} — use ← → to preview`;
+        document.getElementById('removeSlideBtn').disabled = slides === 0;
+      } else {
+        manageSection.style.display = 'none';
+      }
+    }
+
+    function removeCurrentSlide() {
+      const doc = getPreviewDoc();
+      if (!doc || !selectedGallery) {
+        showToast('Tap a gallery on the page first');
+        return;
+      }
+      const slides = selectedGallery.querySelectorAll('.gallery-slide');
+      if (!slides.length) {
+        showToast('No photos in this gallery');
+        return;
+      }
+      const active = selectedGallery.querySelector('.gallery-slide.active') || slides[0];
+      const wasActive = active.classList.contains('active');
+      active.remove();
+
+      const remaining = selectedGallery.querySelectorAll('.gallery-slide');
+      if (!remaining.length) {
+        const frame = selectedGallery.querySelector('.gallery-frame');
+        const empty = doc.createElement('p');
+        empty.className = 'gallery-empty';
+        empty.textContent = 'Add photos from the editor';
+        frame.appendChild(empty);
+      } else if (wasActive) {
+        remaining[0].classList.add('active');
+      }
+      updateGalleryCounterInDoc(selectedGallery);
+      syncFromPreview();
+      setDirty(true);
+      refreshGalleryUI();
+      showToast('Photo removed');
+    }
+
+    function deleteSelectedGallery() {
+      const doc = getPreviewDoc();
+      if (!doc || !selectedGallery) {
+        showToast('Tap a gallery on the page first');
+        return;
+      }
+      const wrap = selectedGallery.closest('.photo-gallery-wrap') || selectedGallery.parentElement;
+      wrap?.remove();
+      selectedGallery = null;
+      selectedElement = null;
+      syncFromPreview();
+      setDirty(true);
+      refreshGalleryUI();
+      showToast('Gallery deleted');
+    }
+
+    function updateGalleryCounterInDoc(gallery) {
+      const wrap = gallery.closest('.photo-gallery-wrap') || gallery.parentElement;
+      const slides = gallery.querySelectorAll('.gallery-slide');
+      const activeIndex = Array.from(slides).findIndex(slide => slide.classList.contains('active'));
+      const counter = wrap?.querySelector('.gallery-meta');
+      if (counter) {
+        counter.textContent = slides.length ? `${activeIndex + 1} / ${slides.length}` : '0 / 0';
+      }
+    }
+
+    function createGalleryElement(doc) {
+      const wrap = doc.createElement('div');
+      wrap.className = 'photo-gallery-wrap';
+      wrap.id = getNextGalleryId(doc);
+
+      const gallery = doc.createElement('div');
+      gallery.className = 'photo-gallery';
+      gallery.setAttribute('data-gallery', '');
+      gallery.dataset.ready = 'true';
+
+      const prev = doc.createElement('button');
+      prev.type = 'button';
+      prev.className = 'gallery-arrow gallery-prev';
+      prev.setAttribute('aria-label', 'Previous photo');
+      prev.textContent = '‹';
+
+      const frame = doc.createElement('div');
+      frame.className = 'gallery-frame';
+
+      const slides = doc.createElement('div');
+      slides.className = 'gallery-slides';
+      const empty = doc.createElement('p');
+      empty.className = 'gallery-empty';
+      empty.textContent = 'Add photos from the editor';
+      slides.appendChild(empty);
+
+      const next = doc.createElement('button');
+      next.type = 'button';
+      next.className = 'gallery-arrow gallery-next';
+      next.setAttribute('aria-label', 'Next photo');
+      next.textContent = '›';
+
+      slides.appendChild(prev);
+      slides.appendChild(next);
+      frame.appendChild(slides);
+      gallery.appendChild(frame);
+
+      const counter = doc.createElement('div');
+      counter.className = 'gallery-meta';
+      counter.textContent = '0 / 0';
+
+      wrap.appendChild(gallery);
+      wrap.appendChild(counter);
+      return wrap;
+    }
+
+    function addSlideToGallery(gallery, imagePath) {
+      const doc = gallery.ownerDocument;
+      let frame = gallery.querySelector('.gallery-frame');
+      if (!frame) {
+        normalizeGalleries(doc);
+        frame = gallery.querySelector('.gallery-frame');
+      }
+      if (!frame) {
+        showToast('Gallery broken — tap + Box → Photo Gallery to add a new one');
+        return false;
+      }
+
+      const slides = ensureGallerySlides(frame);
+      if (!slides) return false;
+
+      slides.querySelector('.gallery-empty')?.remove();
+
+      const existingSlides = slides.querySelectorAll('.gallery-slide');
+      const img = doc.createElement('img');
+      img.className = 'gallery-slide';
+      img.src = imageSrc(imagePath);
+      img.alt = 'Gallery photo';
+
+      if (!existingSlides.length) {
+        img.classList.add('active');
+      }
+
+      slides.appendChild(img);
+      updateGalleryCounterInDoc(gallery);
+      return true;
+    }
+
+    function insertImagesAsGallery(imagePaths) {
+      const doc = getPreviewDoc();
+      if (!doc || !imagePaths.length) return;
+
+      const wrap = createGalleryElement(doc);
+      insertNodeIntoPage(wrap);
+      const gallery = wrap.querySelector('[data-gallery]');
+      imagePaths.forEach(path => addSlideToGallery(gallery, path));
+      selectedGallery = gallery;
+      selectGallery(gallery);
+      setupGalleryNavigation(doc);
+      refreshGalleryUI();
+      syncFromPreview();
+      setDirty(true);
+      closeDrawers();
+      showToast(`Gallery created with ${imagePaths.length} photo${imagePaths.length > 1 ? 's' : ''}`);
+    }
+
+    function insertNewGallery() {
+      if (!currentFile.endsWith('.html')) {
+        showToast('Open Iggypop.html first');
+        return;
+      }
+      ensureDocumentMode();
+      const doc = getPreviewDoc();
+      if (!doc) {
+        showToast('Wait for the page to load');
+        return;
+      }
+      const wrap = createGalleryElement(doc);
+      if (!insertNodeIntoPage(wrap)) return;
+      selectedGallery = wrap.querySelector('[data-gallery]');
+      selectGallery(selectedGallery);
+      setupGalleryNavigation(doc);
+      refreshGalleryUI();
+      closeDrawers();
+      showToast('Gallery added — open Photos to add pictures');
+      try {
+        wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } catch (_) {}
+    }
+
+    function insertImageIntoPage(imagePath) {
+      if (!currentFile.endsWith('.html')) {
+        showToast('Open Iggypop.html to add photos');
+        return;
+      }
+
+      const doc = getPreviewDoc();
+      if (!doc) {
+        showToast('Wait for the page to load');
+        return;
+      }
+
+      if (photoInsertMode === 'gallery') {
+        let gallery = findTargetGallery(doc);
+        if (!gallery) {
+          const galleries = doc.querySelectorAll('[data-gallery]');
+          if (!galleries.length) {
+            insertImagesAsGallery([imagePath]);
+          }
+          return;
+        }
+        if (!addSlideToGallery(gallery, imagePath)) return;
+        selectedGallery = gallery;
+        syncFromPreview();
+        setDirty(true);
+        refreshGalleryUI();
+        closeDrawers();
+        showToast('Added to ' + (gallery.closest('.photo-gallery-wrap')?.id || 'gallery') + ' — tap Save');
+        return;
+      }
+
+      const img = doc.createElement('img');
+      img.className = 'bordered-photo';
+      img.src = imageSrc(imagePath);
+      img.alt = 'IggyPop photo';
+
+      insertNodeIntoPage(img);
+      closeDrawers();
+      showToast('Bordered photo added — tap Save');
+    }
+
+    function setPhotoInsertMode(mode) {
+      photoInsertMode = mode;
+      document.getElementById('photoModeHint').textContent = mode === 'gallery'
+        ? 'Tap a gallery on the page (it turns pink), or pick one under Add photos to. Then add pictures below.'
+        : 'Adds one bordered photo. Switch back to gallery mode after adding.';
+      showToast(mode === 'gallery' ? 'Gallery mode' : 'Bordered photo mode');
+    }
+
+    async function refreshPhotoGallery() {
+      const res = await fetch('/api/files', { headers: authHeaders() });
+      const files = await res.json();
+      const images = files.filter(f => /\.(jpg|jpeg|png|gif|webp|heic|heif)$/i.test(f));
+      const grid = document.getElementById('photoGrid');
+      grid.innerHTML = '';
+
+      if (!images.length) {
+        grid.innerHTML = '<p class="photo-hint" style="grid-column:1/-1;">No photos yet. Choose from your camera roll above.</p>';
+        return;
+      }
+
+      images.forEach(imagePath => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.title = 'Add to page';
+        const img = document.createElement('img');
+        img.src = '/' + imagePath.split('/').map(encodeURIComponent).join('/');
+        img.alt = imagePath;
+        btn.appendChild(img);
+        btn.addEventListener('click', () => insertImageIntoPage(imagePath));
+        grid.appendChild(btn);
+      });
+    }
+
+    async function uploadPhotos(files) {
+      if (!files || !files.length) return;
+
+      const uploaded = [];
+      for (const file of files) {
+        const fd = new FormData();
+        fd.append('file', file);
+        const res = await fetch('/api/upload', { method: 'POST', body: fd, headers: authHeaders() });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          uploaded.push(data.filename);
+          showToast('Uploaded ' + file.name);
+        } else {
+          showToast(data.error || 'Upload failed');
+        }
+      }
+
+      await refreshFiles();
+      await refreshPhotoGallery();
+
+      if (!uploaded.length) return;
+
+      if (photoInsertMode === 'gallery') {
+        const doc = getPreviewDoc();
+        const gallery = doc ? findTargetGallery(doc) : null;
+        if (gallery) {
+          uploaded.forEach(path => addSlideToGallery(gallery, path));
+          selectedGallery = gallery;
+          syncFromPreview();
+          setDirty(true);
+          refreshGalleryUI();
+          closeDrawers();
+          showToast(`Added ${uploaded.length} photo${uploaded.length > 1 ? 's' : ''} — tap Save`);
+        } else if (!doc?.querySelectorAll('[data-gallery]').length) {
+          insertImagesAsGallery(uploaded);
+        }
+      } else if (uploaded.length === 1) {
+        insertImageIntoPage(uploaded[0]);
+      } else {
+        insertImagesAsGallery(uploaded);
+      }
+    }
+
+    async function loadEditorLinks() {
+      const box = document.getElementById('editorLinks');
+      if (!box) return;
+      try {
+        const res = await fetch('/api/info');
+        const data = await res.json();
+        const lines = [];
+        if (data.localUrl) lines.push(`<strong>Same Wi‑Fi:</strong> ${data.localUrl}`);
+        if (data.publicUrl) lines.push(`<strong>From anywhere:</strong> ${data.publicUrl}`);
+        box.innerHTML = lines.length
+          ? lines.join('<br>')
+          : 'Start the editor on your Mac to see your links here.';
+      } catch (_) {
+        box.textContent = 'Start the editor on your Mac first.';
+      }
+    }
+
+    function initFontFamilySelect() {
+      const select = document.getElementById('fontFamilySelect');
+      if (!select) return;
+      select.querySelectorAll('option').forEach(opt => {
+        if (opt.value) opt.style.fontFamily = opt.value;
+      });
+    }
+
+    async function initEditor() {
+      initFontFamilySelect();
+      await loadEditorLinks();
+      await refreshFiles();
+      await refreshPhotoGallery();
+      await loadFile(DEFAULT_FILE);
+    }
+
+    loginBtn.addEventListener('click', login);
+    pinInput.addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+    document.getElementById('menuBtn').addEventListener('click', () => {
+      if (isDrawerOpen(filesDrawer)) closeDrawers();
+      else openDrawer(filesDrawer);
+    });
+    document.getElementById('photosBtn').addEventListener('click', async () => {
+      if (isDrawerOpen(photosDrawer)) {
+        closeDrawers();
+        return;
+      }
+      setPhotoInsertMode('gallery');
+      await refreshPhotoGallery();
+      refreshGalleryUI();
+      openDrawer(photosDrawer);
+    });
+    document.getElementById('newGalleryBtn').addEventListener('click', () => insertNewGallery());
+    document.getElementById('removeSlideBtn').addEventListener('click', () => removeCurrentSlide());
+    document.getElementById('deleteGalleryBtn').addEventListener('click', () => deleteSelectedGallery());
+    document.getElementById('modeBorderedBtn').addEventListener('click', () => setPhotoInsertMode('bordered'));
+    document.getElementById('libraryBtn').addEventListener('click', () => document.getElementById('libraryInput').click());
+    document.getElementById('cameraBtn').addEventListener('click', () => document.getElementById('cameraInput').click());
+    document.getElementById('libraryInput').addEventListener('change', e => {
+      uploadPhotos(e.target.files);
+      e.target.value = '';
+    });
+    document.getElementById('cameraInput').addEventListener('change', e => {
+      uploadPhotos(e.target.files);
+      e.target.value = '';
+    });
+    document.getElementById('resizeBtn').addEventListener('click', () => {
+      if (isDrawerOpen(resizeDrawer)) {
+        closeDrawers();
+        return;
+      }
+      ensureDocumentMode();
+      openDrawer(resizeDrawer);
+      updateResizeControls(selectedElement);
+    });
+    document.getElementById('resizeSlider').addEventListener('input', e => {
+      applyResize(parseInt(e.target.value, 10), false);
+    });
+    document.getElementById('resizeSlider').addEventListener('change', e => {
+      applyResize(parseInt(e.target.value, 10), false);
+    });
+    document.querySelectorAll('[data-size]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const val = btn.dataset.size;
+        if (val === '100-full') applyResize(100, true);
+        else applyResize(parseInt(val, 10), false);
+      });
+    });
+    document.getElementById('spacerBtn').addEventListener('click', () => {
+      ensureDocumentMode();
+      insertSpacerAtCursor();
+      closeDrawers();
+    });
+    document.getElementById('boxBtn').addEventListener('click', () => {
+      if (!currentFile.endsWith('.html')) {
+        showToast('Open Iggypop.html to add boxes');
+        return;
+      }
+      if (isDrawerOpen(boxesDrawer)) {
+        closeDrawers();
+        return;
+      }
+      ensureDocumentMode();
+      openDrawer(boxesDrawer);
+    });
+    document.querySelectorAll('[data-box]').forEach(btn => {
+      btn.addEventListener('click', () => addTextBox(btn.dataset.box));
+    });
+    document.getElementById('formatBtn').addEventListener('click', () => openFormatDrawer());
+    document.getElementById('formatBarBtn').addEventListener('click', () => openFormatDrawer());
+    document.getElementById('selectHeadingBtn').addEventListener('click', () => selectBoxPart('heading'));
+    document.getElementById('selectTextBtn').addEventListener('click', () => selectBoxPart('text'));
+    document.getElementById('selectBlockBtn').addEventListener('click', () => selectBoxPart('all'));
+    document.getElementById('saveBtn').addEventListener('click', saveFile);
+    document.getElementById('publishBtn').addEventListener('click', async () => {
+      if (isDrawerOpen(publishDrawer)) {
+        closeDrawers();
+        return;
+      }
+      await loadPublishConfig();
+      openDrawer(publishDrawer);
+    });
+    document.getElementById('saveFtpBtn').addEventListener('click', saveFtpSettings);
+    document.getElementById('publishNowBtn').addEventListener('click', publishWebsite);
+    drawerBackdrop.addEventListener('click', closeDrawers);
+    document.addEventListener('click', handleDrawerClose, true);
+    document.addEventListener('pointerup', handleDrawerClose, true);
+    document.querySelectorAll('[data-cmd]').forEach(btn => {
+      btn.addEventListener('click', () => format(btn.dataset.cmd));
+    });
+    document.querySelectorAll('[data-block]').forEach(btn => {
+      btn.addEventListener('click', () => format('formatBlock', btn.dataset.block));
+    });
+    document.getElementById('textColor').addEventListener('input', e => format('foreColor', e.target.value));
+    document.getElementById('fontFamilySelect').addEventListener('change', e => {
+      applyFontFamily(e.target.value);
+    });
+    document.getElementById('fontSizeSlider').addEventListener('input', e => {
+      document.getElementById('fontSizeValue').textContent = e.target.value + 'px';
+    });
+    document.getElementById('fontSizeSlider').addEventListener('change', e => {
+      applyFontSize(e.target.value + 'px');
+    });
+    document.querySelectorAll('[data-font-size]').forEach(btn => {
+      btn.addEventListener('click', () => applyFontSize(btn.dataset.fontSize));
+    });
+    document.getElementById('lineSpacingSlider').addEventListener('input', e => {
+      document.getElementById('lineSpacingValue').textContent = (e.target.value / 10).toFixed(2).replace(/\.?0+$/, '');
+    });
+    document.getElementById('lineSpacingSlider').addEventListener('change', e => {
+      applyLineSpacing((e.target.value / 10).toFixed(2));
+    });
+    document.querySelectorAll('[data-line-height]').forEach(btn => {
+      btn.addEventListener('click', () => applyLineSpacing(btn.dataset.lineHeight));
+    });
+    document.querySelectorAll('[data-paragraph-gap]').forEach(btn => {
+      btn.addEventListener('click', () => applyParagraphGap(btn.dataset.paragraphGap));
+    });
+    document.querySelectorAll('[data-section-gap]').forEach(btn => {
+      btn.addEventListener('click', () => insertSectionGap(btn.dataset.sectionGap));
+    });
+
+    codeEditor.addEventListener('input', () => setDirty(true));
+
+    window.addEventListener('beforeunload', e => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    });
+
+    (async () => {
+      await loadEditorLinks();
+      if (await checkAuth()) {
+        loginScreen.classList.remove('active');
+        editorScreen.classList.add('active');
+        await initEditor();
+      }
+    })();
+  </script>
+</body>
+</html>
