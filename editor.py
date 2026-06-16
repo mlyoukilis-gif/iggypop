@@ -649,6 +649,11 @@ class EditorHandler(http.server.SimpleHTTPRequestHandler):
                 content = data.get('content', '')
                 safe_path = resolve_site_path(file_path)
                 safe_path.write_text(content, encoding='utf-8')
+                if file_path == DEFAULT_FILE:
+                    try:
+                        build_upload_package()
+                    except Exception:
+                        pass
                 return send_json(self, 200, {'ok': True})
             except ValueError as e:
                 return send_json(self, 400, {'error': str(e)})

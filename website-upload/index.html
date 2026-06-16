@@ -1003,7 +1003,38 @@
       </form>
     </section>
 
-  </div><footer><p>© 2026 IggyPop Kennel | Italian Greyhounds</p>
+  </div>
+  <script>
+    (function () {
+      var pageId = 'home';
+      var hash = (location.hash || '').replace(/^#/, '');
+      if (hash && document.getElementById(hash)?.classList.contains('page')) {
+        pageId = hash;
+      } else {
+        try {
+          var stored = sessionStorage.getItem('iggy_active_page') || localStorage.getItem('iggy_active_page');
+          if (stored && document.getElementById(stored)?.classList.contains('page')) {
+            pageId = stored;
+          } else {
+            var match = document.cookie.match(/(?:^|;\s*)iggy_active_page=([^;]*)/);
+            if (match) {
+              var cookiePage = decodeURIComponent(match[1]);
+              if (cookiePage && document.getElementById(cookiePage)?.classList.contains('page')) {
+                pageId = cookiePage;
+              }
+            }
+          }
+        } catch (_) {}
+      }
+      document.querySelectorAll('.page').forEach(function (p) { p.classList.remove('active'); });
+      var target = document.getElementById(pageId);
+      if (target) target.classList.add('active');
+      document.querySelectorAll('.side-nav a').forEach(function (a) { a.classList.remove('active'); });
+      var nav = document.querySelector('.side-nav a[data-page="' + pageId + '"]');
+      if (nav) nav.classList.add('active');
+    })();
+  </script>
+  <footer><p>© 2026 IggyPop Kennel | Italian Greyhounds</p>
   </footer>
 
   <script>
@@ -1081,12 +1112,68 @@
       const link = document.querySelector(`.side-nav a[data-page="${pageId}"]`);
       if (link) link.classList.add('active');
 
+      try {
+        sessionStorage.setItem('iggy_active_page', pageId);
+        localStorage.setItem('iggy_active_page', pageId);
+        document.cookie = 'iggy_active_page=' + encodeURIComponent(pageId) + '; path=/; max-age=31536000; SameSite=Lax';
+        const hash = '#' + pageId;
+        if (window.location.hash !== hash) {
+          history.replaceState(null, '', hash);
+        }
+      } catch (_) {}
+
       closeMobileNav();
     }
 
-    // Initialize first page and active link
+    function getInitialPageId() {
+      const fromHash = location.hash.replace(/^#/, '');
+      if (fromHash && document.getElementById(fromHash)?.classList.contains('page')) {
+        return fromHash;
+      }
+      try {
+        const fromStore = sessionStorage.getItem('iggy_active_page') || localStorage.getItem('iggy_active_page');
+        if (fromStore && document.getElementById(fromStore)?.classList.contains('page')) {
+          return fromStore;
+        }
+      } catch (_) {}
+      try {
+        const match = document.cookie.match(/(?:^|;\s*)iggy_active_page=([^;]*)/);
+        if (match) {
+          const fromCookie = decodeURIComponent(match[1]);
+          if (fromCookie && document.getElementById(fromCookie)?.classList.contains('page')) {
+            return fromCookie;
+          }
+        }
+      } catch (_) {}
+      return 'home';
+    }
+
+    function applyPageVisibility(pageId) {
+      document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+      const target = document.getElementById(pageId);
+      if (target) target.classList.add('active');
+      document.querySelectorAll('.side-nav a').forEach(a => a.classList.remove('active'));
+      const link = document.querySelector(`.side-nav a[data-page="${pageId}"]`);
+      if (link) link.classList.add('active');
+    }
+
+    // Restore last section from URL hash or session (not always home)
     document.addEventListener('DOMContentLoaded', () => {
-      showPage('home');
+      showPage(getInitialPageId());
+
+      document.querySelector('.side-nav')?.addEventListener('click', (e) => {
+        const link = e.target.closest('a[data-page]');
+        if (!link) return;
+        e.preventDefault();
+        showPage(link.dataset.page);
+      });
+
+      window.addEventListener('hashchange', () => {
+        const id = location.hash.replace(/^#/, '');
+        if (id && document.getElementById(id)?.classList.contains('page')) {
+          showPage(id);
+        }
+      });
 
       const menuToggle = document.getElementById('menuToggle');
       const navBackdrop = document.getElementById('navBackdrop');

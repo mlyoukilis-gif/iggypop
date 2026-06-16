@@ -330,6 +330,49 @@
       max-width: min(520px, 100%);
     }
 
+    .hero .photo-gallery-wrap,
+    .puppy-box .photo-gallery-wrap {
+      margin: 12px auto;
+      max-width: 100%;
+      width: fit-content;
+    }
+
+    .photo-gallery-wrap.gallery-centered,
+    .photo-gallery-wrap.gallery-align-center {
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .photo-gallery-wrap.gallery-align-left,
+    img.bordered-photo.gallery-align-left {
+      display: block;
+      margin-left: 0;
+      margin-right: auto;
+    }
+
+    .photo-gallery-wrap.gallery-align-right,
+    img.bordered-photo.gallery-align-right {
+      display: block;
+      margin-left: auto;
+      margin-right: 0;
+    }
+
+    img.bordered-photo.gallery-align-center {
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .photo-gallery-wrap.gallery-full-width {
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+
+    .hero, .puppy-box {
+      overflow: visible;
+    }
+
     .photo-gallery-wrap .photo-gallery {
       margin: 0;
     }
@@ -849,15 +892,15 @@
         </div>
         <div class="card">
           <h3>Family Raised</h3>
-          <p>Our puppies are loved, socialized, and raised like family.</p>
-        </div>
-      </div>
-    </section>
+          <p>Our puppies are loved, socialized, and raised like family.</p><p class="content-spacer"></p>
+        </div><p class="content-spacer"></p>
+      </div><p class="content-spacer"></p>
+    <div class="hero"><h2>AVAILABLE PUPPY</h2><p>SILVENTO SIRED GREY MALE AVAILABLE!!!!!!</p><p class="content-spacer"></p></div></section><p class="content-spacer"></p>
 
     <section id="about" class="page">
       <div class="hero">
         <h2>About Us</h2>
-        <p>IggyPop Kennel was created by owner and founder, Margaret Youkilis, from a love for Italian Greyhounds and their graceful, affectionate, and playful nature.</p><p class="content-spacer"><br></p></div><div class="photo-gallery-wrap" id="gallery2"><div class="photo-gallery" data-gallery=""><div class="gallery-frame"><div class="gallery-slides"><img class="gallery-slide active" src="Iggypop 2/IMG_7071-20260616-100839.jpg" alt="Gallery photo"><button type="button" class="gallery-arrow gallery-prev" aria-label="Previous photo">‹</button><button type="button" class="gallery-arrow gallery-next" aria-label="Next photo">›</button></div></div></div><div class="gallery-meta">1 / 1</div></div><p class="content-spacer"><br></p>
+        <p>IggyPop Kennel was created by owner and founder, Margaret Youkilis, from a love for Italian Greyhounds and their graceful, affectionate, and playful nature.</p><p class="content-spacer"></p></div><div class="photo-gallery-wrap" id="gallery2"><div class="photo-gallery" data-gallery=""><div class="gallery-frame"><div class="gallery-slides"><img class="gallery-slide active" src="Iggypop 2/IMG_7071-20260616-100839.jpg" alt="Gallery photo"><button type="button" class="gallery-arrow gallery-prev" aria-label="Previous photo">‹</button><button type="button" class="gallery-arrow gallery-next" aria-label="Next photo">›</button></div></div></div><div class="gallery-meta">1 / 1</div></div><p class="content-spacer"></p>
     </section>
 
     <section id="puppies" class="page">
@@ -901,9 +944,9 @@
     </section>
 
     <section id="planned" class="page">
-      <div class="hero" style="line-height: 1 !important;"><span style="font-size: 13px !important;">
+      <div class="hero" style=""><span style="font-size: 13px !important;">
         <h2>Planned Litters</h2>
-        <p style="line-height: 1.2 !important;">December 2026 litter planned: Katana Skywinds x Emerald Galaxy</p><p class="content-spacer"><br></p>
+        <p style="line-height: 1.2 !important;">December 2026 litter planned: Katana Skywinds x Emerald Galaxy</p><p class="content-spacer"></p>
       </span></div>
     </section>
 
@@ -1004,7 +1047,36 @@
     </section>
 
   </div>
-
+  <script>
+    (function () {
+      var pageId = 'home';
+      var hash = (location.hash || '').replace(/^#/, '');
+      if (hash && document.getElementById(hash)?.classList.contains('page')) {
+        pageId = hash;
+      } else {
+        try {
+          var stored = sessionStorage.getItem('iggy_active_page') || localStorage.getItem('iggy_active_page');
+          if (stored && document.getElementById(stored)?.classList.contains('page')) {
+            pageId = stored;
+          } else {
+            var match = document.cookie.match(/(?:^|;\s*)iggy_active_page=([^;]*)/);
+            if (match) {
+              var cookiePage = decodeURIComponent(match[1]);
+              if (cookiePage && document.getElementById(cookiePage)?.classList.contains('page')) {
+                pageId = cookiePage;
+              }
+            }
+          }
+        } catch (_) {}
+      }
+      document.querySelectorAll('.page').forEach(function (p) { p.classList.remove('active'); });
+      var target = document.getElementById(pageId);
+      if (target) target.classList.add('active');
+      document.querySelectorAll('.side-nav a').forEach(function (a) { a.classList.remove('active'); });
+      var nav = document.querySelector('.side-nav a[data-page="' + pageId + '"]');
+      if (nav) nav.classList.add('active');
+    })();
+  </script>
   <footer><p>© 2026 IggyPop Kennel | Italian Greyhounds</p>
   </footer>
 
@@ -1085,6 +1157,8 @@
 
       try {
         sessionStorage.setItem('iggy_active_page', pageId);
+        localStorage.setItem('iggy_active_page', pageId);
+        document.cookie = 'iggy_active_page=' + encodeURIComponent(pageId) + '; path=/; max-age=31536000; SameSite=Lax';
         const hash = '#' + pageId;
         if (window.location.hash !== hash) {
           history.replaceState(null, '', hash);
@@ -1100,17 +1174,49 @@
         return fromHash;
       }
       try {
-        const fromStore = sessionStorage.getItem('iggy_active_page');
+        const fromStore = sessionStorage.getItem('iggy_active_page') || localStorage.getItem('iggy_active_page');
         if (fromStore && document.getElementById(fromStore)?.classList.contains('page')) {
           return fromStore;
+        }
+      } catch (_) {}
+      try {
+        const match = document.cookie.match(/(?:^|;\s*)iggy_active_page=([^;]*)/);
+        if (match) {
+          const fromCookie = decodeURIComponent(match[1]);
+          if (fromCookie && document.getElementById(fromCookie)?.classList.contains('page')) {
+            return fromCookie;
+          }
         }
       } catch (_) {}
       return 'home';
     }
 
-    // Initialize page from hash or last visited section (not always home)
+    function applyPageVisibility(pageId) {
+      document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+      const target = document.getElementById(pageId);
+      if (target) target.classList.add('active');
+      document.querySelectorAll('.side-nav a').forEach(a => a.classList.remove('active'));
+      const link = document.querySelector(`.side-nav a[data-page="${pageId}"]`);
+      if (link) link.classList.add('active');
+    }
+
+    // Restore last section from URL hash or session (not always home)
     document.addEventListener('DOMContentLoaded', () => {
       showPage(getInitialPageId());
+
+      document.querySelector('.side-nav')?.addEventListener('click', (e) => {
+        const link = e.target.closest('a[data-page]');
+        if (!link) return;
+        e.preventDefault();
+        showPage(link.dataset.page);
+      });
+
+      window.addEventListener('hashchange', () => {
+        const id = location.hash.replace(/^#/, '');
+        if (id && document.getElementById(id)?.classList.contains('page')) {
+          showPage(id);
+        }
+      });
 
       const menuToggle = document.getElementById('menuToggle');
       const navBackdrop = document.getElementById('navBackdrop');
@@ -1312,6 +1418,8 @@
         }
     });
   </script>
+
+
 
 
 
