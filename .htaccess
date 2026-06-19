@@ -1,0 +1,32 @@
+# Canonical URL: https://www.<your-domain>/
+# Works for iggypopitaliangreyhounds.com, iggypopm.com, and any alias on this host.
+
+RewriteEngine On
+RewriteBase /
+
+# Tag HTTPS requests (direct TLS or Cloudflare Flexible SSL) for HSTS header only
+RewriteCond %{HTTPS} =on [OR]
+RewriteCond %{HTTP:X-Forwarded-Proto} =https [NC,OR]
+RewriteCond %{HTTP:X-Forwarded-SSL} =on
+RewriteRule ^ - [E=HTTPS_ON:1]
+
+# 1) Force HTTPS (direct TLS or proxy via X-Forwarded-Proto / X-Forwarded-SSL)
+RewriteCond %{HTTPS} !=on
+RewriteCond %{HTTP:X-Forwarded-Proto} !https [NC]
+RewriteCond %{HTTP:X-Forwarded-SSL} !on
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301,NE]
+
+# 2) Force www (non-www → www, stays on HTTPS)
+RewriteCond %{HTTP_HOST} !^www\. [NC]
+RewriteRule ^ https://www.%{HTTP_HOST}%{REQUEST_URI} [L,R=301,NE]
+
+# Security headers (requires Apache mod_headers; skipped if module unavailable)
+<IfModule mod_headers.c>
+  # HSTS only when HTTPS is active — safe before Cloudflare SSL is live
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=HTTPS_ON
+
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+</IfModule>

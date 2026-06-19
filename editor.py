@@ -383,7 +383,9 @@ def build_upload_package():
     shutil.rmtree(upload_dir, ignore_errors=True)
     images_dir.mkdir(parents=True)
 
-    source = resolve_site_path(DEFAULT_FILE)
+    source = PROJECT_DIR / DEFAULT_FILE
+    if not source.is_file():
+        source = resolve_site_path(DEFAULT_FILE)
     content = source.read_text(encoding='utf-8', errors='replace')
     content = content.replace('Iggypop 2/', 'images/')
     (upload_dir / 'index.html').write_text(content, encoding='utf-8')
@@ -404,6 +406,11 @@ def build_upload_package():
                 optimize_image_for_web(dest)
                 copied.add(filename)
                 break
+
+    # HTTPS redirects + security headers for Apache shared hosting
+    htaccess_source = PROJECT_DIR / '.htaccess'
+    if htaccess_source.is_file():
+        shutil.copy2(htaccess_source, upload_dir / '.htaccess')
 
     return upload_dir
 
@@ -464,6 +471,11 @@ def publish_via_ftp(config):
 
         with open(upload_dir / 'index.html', 'rb') as handle:
             ftp.storbinary('STOR index.html', handle)
+
+        htaccess_path = upload_dir / '.htaccess'
+        if htaccess_path.is_file():
+            with open(htaccess_path, 'rb') as handle:
+                ftp.storbinary('STOR .htaccess', handle)
 
         try:
             ftp.mkd('images')
