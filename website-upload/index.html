@@ -3,10 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
   <title>IggyPop Kennel</title>
+  <link rel="canonical" href="https://www.iggypopitaliangreyhounds.com/" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Carlito:ital,wght@0,400;0,700;1,400;1,700&family=Caladea:ital,wght@0,400;0,700;1,400&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Carlito:ital,wght@0,400;0,700;1,400;1,700&family=Caladea:ital,wght@0,400;0,700;1,400&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Carlito:ital,wght@0,400;0,700;1,400;1,700&family=Caladea:ital,wght@0,400;0,700;1,400&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" /></noscript>
 
   <style>
     * {
@@ -325,6 +328,11 @@
       box-shadow: 0 10px 28px rgba(255, 140, 203, 0.22);
     }
 
+    .bordered-photo-wrap {
+      display: block;
+      max-width: 100%;
+    }
+
     .photo-gallery-wrap {
       margin: 20px auto;
       max-width: min(520px, 100%);
@@ -435,10 +443,6 @@
 
     .gallery-slide.active {
       display: block;
-    }
-
-    .gallery-slides > .gallery-slide:not(.active) {
-      display: none;
     }
 
     .gallery-empty {
@@ -1095,6 +1099,36 @@
       document.getElementById('navBackdrop')?.classList.add('open');
     }
 
+    function loadGallerySlideSrc(slide) {
+      if (!slide || slide.tagName !== 'IMG') return;
+      const deferred = slide.getAttribute('data-deferred-src');
+      if (!deferred) return;
+      slide.src = deferred;
+      slide.removeAttribute('data-deferred-src');
+    }
+
+    function deferGallerySlideSrc(slide) {
+      if (!slide || slide.tagName !== 'IMG') return;
+      if (slide.getAttribute('data-deferred-src')) return;
+      const src = slide.getAttribute('src');
+      if (!src) return;
+      slide.setAttribute('data-deferred-src', src);
+      slide.removeAttribute('src');
+    }
+
+    function applyGalleryLazyLoading(gallery) {
+      const page = gallery.closest('.page');
+      const pageHidden = page && !page.classList.contains('active');
+      const slides = gallery.querySelectorAll('.gallery-slide');
+      slides.forEach(slide => {
+        if (slide.tagName === 'IMG') slide.decoding = 'async';
+      });
+      slides.forEach(slide => {
+        if (pageHidden || !slide.classList.contains('active')) deferGallerySlideSrc(slide);
+        else loadGallerySlideSrc(slide);
+      });
+    }
+
     function updateGalleryCounter(gallery) {
       const wrap = gallery.closest('.photo-gallery-wrap') || gallery.parentElement;
       const slides = gallery.querySelectorAll('.gallery-slide');
@@ -1109,18 +1143,21 @@
       const slides = gallery.querySelectorAll('.gallery-slide');
       if (!slides.length) return;
       const index = (nextIndex + slides.length) % slides.length;
-      slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
+      slides.forEach((slide, i) => {
+        slide.classList.toggle('active', i === index);
+        if (slide.classList.contains('active')) loadGallerySlideSrc(slide);
+        else deferGallerySlideSrc(slide);
+      });
+      const nextSlide = slides[(index + 1) % slides.length];
+      if (nextSlide?.getAttribute('data-deferred-src')) loadGallerySlideSrc(nextSlide);
       updateGalleryCounter(gallery);
     }
 
     function initGalleries(root) {
       (root || document).querySelectorAll('[data-gallery]').forEach(gallery => {
-        const slides = gallery.querySelectorAll('.gallery-slide');
-        if (slides.length && !gallery.querySelector('.gallery-slide.active')) {
-          slides[0].classList.add('active');
-        }
         if (gallery.dataset.ready === 'true') return;
         gallery.dataset.ready = 'true';
+        applyGalleryLazyLoading(gallery);
         updateGalleryCounter(gallery);
 
         let touchStartX = 0;
@@ -1174,6 +1211,8 @@
       } catch (_) {}
 
       closeMobileNav();
+      const pageEl = document.getElementById(pageId);
+      if (pageEl) pageEl.querySelectorAll('[data-gallery]').forEach(applyGalleryLazyLoading);
     }
 
     function getInitialPageId() {
@@ -1277,7 +1316,7 @@
           const host = window.location.hostname;
           const port = window.location.port;
           const onEditorServer = port === '3000'
-            && !/^(www\.)?iggypopm\.com$/i.test(host)
+            && !/^(www\.)?(iggypopm|iggypopitaliangreyhounds)\.com$/i.test(host)
             && (host.endsWith('.local')
             || host.includes('.loca.lt')
             || host === 'localhost'

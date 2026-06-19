@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
   <title>IggyPop Kennel</title>
+  <link rel="canonical" href="https://www.iggypopitaliangreyhounds.com/" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Carlito:ital,wght@0,400;0,700;1,400;1,700&family=Caladea:ital,wght@0,400;0,700;1,400&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
@@ -1314,7 +1316,7 @@
           const host = window.location.hostname;
           const port = window.location.port;
           const onEditorServer = port === '3000'
-            && !/^(www\.)?iggypopm\.com$/i.test(host)
+            && !/^(www\.)?(iggypopm|iggypopitaliangreyhounds)\.com$/i.test(host)
             && (host.endsWith('.local')
             || host.includes('.loca.lt')
             || host === 'localhost'
