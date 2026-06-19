@@ -6,6 +6,12 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#f2f2f7" />
   <title>IggyPop Editor</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=4" />
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=4" />
+  <link rel="icon" href="favicon.ico?v=4" sizes="any" />
+  <link rel="shortcut icon" href="favicon.ico?v=4" />
+  <link rel="icon" href="favicon.svg?v=4" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=4" />
   <style>
     :root {
       --accent: #007aff;
@@ -241,6 +247,7 @@
       flex: 1;
       min-height: 0;
       display: flex;
+      position: relative;
       border-radius: 2px 2px 10px 10px;
       background: #fffefb;
       box-shadow:
@@ -385,6 +392,40 @@
       width: 100%;
       border: none;
       background: white;
+    }
+
+    .preview-error {
+      display: none;
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      padding: 24px 20px;
+      background: #fffefb;
+      color: var(--text);
+      text-align: center;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .preview-error.visible { display: flex; }
+
+    .preview-error h3 {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .preview-error p {
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.5;
+      max-width: 320px;
+    }
+
+    .top-bar-icon.view-mode-active {
+      background: #e0f2fe;
+      color: #0369a1;
     }
 
     #codeEditor {
@@ -1170,6 +1211,7 @@
         <button class="btn btn-ghost top-bar-icon" id="menuBtn" title="Library">☰</button>
         <button class="btn btn-ghost top-bar-icon" id="pagesBtn" title="Pages">📄</button>
         <button class="btn btn-ghost top-bar-icon" id="undoBtn" disabled title="Undo">↩</button>
+        <button class="btn btn-ghost top-bar-icon" id="viewModeBtn" title="Switch to code view" hidden>Code</button>
       </div>
       <div class="top-bar-center">
         <div id="pageTitle">Home</div>
@@ -1192,6 +1234,11 @@
       </aside>
       <div class="editor-main">
         <div class="page-canvas">
+          <div class="preview-error" id="previewError" aria-live="polite">
+            <h3>Preview unavailable</h3>
+            <p id="previewErrorText">Start the editor on your Mac with Start Editor.command, then refresh this page.</p>
+            <button type="button" class="btn btn-primary" id="retryPreviewBtn">Try again</button>
+          </div>
           <iframe id="previewFrame" title="Site preview"></iframe>
           <textarea id="codeEditor" spellcheck="false"></textarea>
         </div>
@@ -1222,7 +1269,7 @@
 
   <div class="drawer" id="publishDrawer">
     <div class="drawer-header">
-      <h3>Publish to iggypopm.com</h3>
+      <h3>Publish to iggypopitaliangreyhounds.com</h3>
       <button type="button" class="drawer-close" data-close aria-label="Close">✕</button>
     </div>
     <p class="photo-hint">Uploads your saved site to Network Solutions. Enter your FTP details once — find them in Network Solutions → Hosting → FTP settings.</p>
@@ -1468,6 +1515,9 @@
     const loginBtn = document.getElementById('loginBtn');
     const loginError = document.getElementById('loginError');
     const previewFrame = document.getElementById('previewFrame');
+    const previewError = document.getElementById('previewError');
+    const previewErrorText = document.getElementById('previewErrorText');
+    const viewModeBtn = document.getElementById('viewModeBtn');
     const codeEditor = document.getElementById('codeEditor');
     const fileLabel = document.getElementById('fileLabel');
     const saveStatus = document.getElementById('saveStatus');
@@ -1692,14 +1742,17 @@
       if (doc.defaultView?.showPage) {
         doc.defaultView.showPage(pageId);
         updatePageStatusLabel(pageId);
-        return;
+      } else {
+        doc.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+        target.classList.add('active');
+        doc.querySelectorAll('.side-nav a').forEach(a => a.classList.remove('active'));
+        const link = doc.querySelector(`.side-nav a[data-page="${pageId}"]`);
+        if (link) link.classList.add('active');
+        updatePageStatusLabel(pageId);
       }
-      doc.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-      target.classList.add('active');
-      doc.querySelectorAll('.side-nav a').forEach(a => a.classList.remove('active'));
-      const link = doc.querySelector(`.side-nav a[data-page="${pageId}"]`);
-      if (link) link.classList.add('active');
-      updatePageStatusLabel(pageId);
+      const win = doc.defaultView;
+      if (win?.pinScrollTop) win.pinScrollTop();
+      else win?.scrollTo(0, 0);
     }
 
     function trackPreviewNavigation(doc) {
@@ -1882,6 +1935,7 @@
       doc.querySelectorAll('.gallery-frame[data-editor-swipe]').forEach(el => el.removeAttribute('data-editor-swipe'));
       doc.querySelectorAll('.gallery-drag-handle').forEach(el => el.remove());
       doc.querySelectorAll('.element-move-handle').forEach(el => el.remove());
+      doc.querySelectorAll('.editor-has-move-handle').forEach(el => el.classList.remove('editor-has-move-handle'));
       doc.querySelectorAll('.corner-resize-overlay').forEach(el => el.remove());
       doc.querySelectorAll('.editor-picture-resizable').forEach(el => el.classList.remove('editor-picture-resizable'));
       doc.querySelectorAll('.gallery-drop-line').forEach(el => el.remove());
@@ -2094,20 +2148,30 @@
           outline: 2px dashed #059669 !important;
           outline-offset: 4px;
           opacity: 0.94;
+          z-index: 1000 !important;
+        }
+        .editor-has-move-handle:not(.editor-placed-box):not(.editor-page-positioned) {
+          position: relative !important;
         }
         .element-move-handle {
+          position: absolute;
+          left: 0;
+          right: 0;
+          top: -34px;
           display: block;
           font-size: 0.72rem;
           color: #059669;
           text-align: center;
           padding: 6px 8px;
-          margin-bottom: 4px;
+          margin: 0;
           background: #ecfdf5;
           border-radius: 8px;
           cursor: grab;
           touch-action: none;
           user-select: none;
           -webkit-user-select: none;
+          z-index: 25;
+          box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
         }
         .element-move-handle:active { cursor: grabbing; }
         .editor-picture-resizable:not(.editor-placed-box):not(.editor-page-positioned) {
@@ -2249,12 +2313,16 @@
 
     function removeMoveHandles(doc) {
       doc?.querySelectorAll('.element-move-handle').forEach(el => el.remove());
+      doc?.querySelectorAll('.editor-has-move-handle').forEach(el => el.classList.remove('editor-has-move-handle'));
     }
 
     function addMoveHandle(el) {
       if (!el || !moveMode) return;
       const doc = el.ownerDocument;
       removeMoveHandles(doc);
+      if (!isAbsolutePlacedBox(el) && !el.classList.contains('editor-page-positioned')) {
+        el.classList.add('editor-has-move-handle');
+      }
       const handle = doc.createElement('div');
       handle.className = 'element-move-handle';
       handle.textContent = '✥ drag to move anywhere on page';
@@ -2455,6 +2523,35 @@
       });
     }
 
+    function getElementPageBounds(el, page) {
+      const pageRect = page.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      return {
+        left: Math.round(elRect.left - pageRect.left),
+        top: Math.round(elRect.top - pageRect.top),
+        width: Math.round(elRect.width),
+        height: Math.round(elRect.height)
+      };
+    }
+
+    function clampElementPagePosition(el, page, left, top) {
+      const pageWidth = page.clientWidth || 1;
+      const width = parseInt(el.style.width, 10) || el.offsetWidth || 1;
+      const maxLeft = Math.max(0, pageWidth - width);
+      return {
+        left: Math.max(0, Math.min(Math.round(left), maxLeft)),
+        top: Math.max(0, Math.round(top))
+      };
+    }
+
+    function bringElementToFrontLayer(el, page) {
+      if (!el || !page) return;
+      const layerables = getPageLayerElements(page);
+      const maxZ = layerables.reduce((max, node) => Math.max(max, parseElementZIndex(node)), 2);
+      el.style.setProperty('z-index', String(maxZ + 1), 'important');
+      page.appendChild(el);
+    }
+
     function ensureElementPagePositioned(el, page) {
       if (!el || !page) return;
       if (isBorderedPhotoImg(el)) {
@@ -2462,30 +2559,36 @@
       }
       preparePageForPlacedBoxes(page);
 
+      const alreadyPositioned = el.classList.contains('editor-page-positioned') || el.classList.contains('editor-placed-box');
+
+      if (alreadyPositioned) {
+        if (el.parentElement !== page) {
+          const bounds = getElementPageBounds(el, page);
+          page.appendChild(el);
+          el.style.setProperty('left', `${bounds.left}px`, 'important');
+          el.style.setProperty('top', `${bounds.top}px`, 'important');
+        }
+        if (!el.style.position) {
+          el.style.setProperty('position', 'absolute', 'important');
+        }
+        el.classList.remove('editor-has-move-handle');
+        return el;
+      }
+
+      const bounds = getElementPageBounds(el, page);
+
       if (el.parentElement !== page) {
         page.appendChild(el);
       }
 
-      if (el.classList.contains('editor-page-positioned') || el.classList.contains('editor-placed-box')) {
-        if (!el.style.position) {
-          el.style.setProperty('position', 'absolute', 'important');
-        }
-        return;
-      }
-
-      const pageRect = page.getBoundingClientRect();
-      const elRect = el.getBoundingClientRect();
-      const left = Math.round(elRect.left - pageRect.left);
-      const top = Math.round(elRect.top - pageRect.top);
-      const width = Math.round(elRect.width);
-      const height = Math.round(elRect.height);
       const isPictureShell = el.classList.contains('bordered-photo-wrap') || el.classList.contains('photo-gallery-wrap');
 
       el.classList.add('editor-page-positioned');
+      el.classList.remove('editor-has-move-handle');
       el.style.setProperty('position', 'absolute', 'important');
-      el.style.setProperty('left', `${left}px`, 'important');
-      el.style.setProperty('top', `${top}px`, 'important');
-      el.style.setProperty('width', `${width}px`, 'important');
+      el.style.setProperty('left', `${bounds.left}px`, 'important');
+      el.style.setProperty('top', `${bounds.top}px`, 'important');
+      el.style.setProperty('width', `${bounds.width}px`, 'important');
       el.style.setProperty('height', 'auto', 'important');
       el.style.setProperty('margin', '0', 'important');
       el.style.setProperty('box-sizing', 'border-box', 'important');
@@ -2493,10 +2596,14 @@
         el.style.setProperty('overflow', 'visible', 'important');
         el.style.removeProperty('min-height');
       } else {
-        el.style.setProperty('min-height', `${height}px`, 'important');
+        el.style.setProperty('min-height', `${bounds.height}px`, 'important');
         el.style.setProperty('overflow', 'auto', 'important');
       }
+      if (!parseElementZIndex(el)) {
+        el.style.setProperty('z-index', '2', 'important');
+      }
       updatePageMinHeight(page);
+      return el;
     }
 
     function getPageLayerElements(page) {
@@ -2598,41 +2705,56 @@
         if (!page) return;
         e.preventDefault();
         e.stopPropagation();
-        ensureElementPagePositioned(el, page);
+        const positioned = ensureElementPagePositioned(el, page);
         try { handle.setPointerCapture(e.pointerId); } catch (_) {}
-        const point = getPagePoint(page, e.clientX, e.clientY);
-        const startLeft = parseInt(el.style.left, 10) || 0;
-        const startTop = parseInt(el.style.top, 10) || 0;
+        const point = getPagePoint(page, e.clientX, e.clientY, { clamp: false });
+        const startLeft = parseInt(positioned.style.left, 10) || 0;
+        const startTop = parseInt(positioned.style.top, 10) || 0;
+        const prevZ = positioned.style.getPropertyValue('z-index');
+        positioned.style.setProperty('z-index', '1000', 'important');
         pageMoveState = {
-          el,
+          el: positioned,
           page,
           handle,
           pointerId: e.pointerId,
           startLeft,
           startTop,
           startX: point.x,
-          startY: point.y
+          startY: point.y,
+          prevZ,
+          minHeightRaf: 0
         };
-        el.classList.add('editor-moving');
+        positioned.classList.add('editor-moving');
         recordUndoSnapshot();
       });
 
       doc.addEventListener('pointermove', (e) => {
         if (!pageMoveState || e.pointerId !== pageMoveState.pointerId) return;
         e.preventDefault();
-        const point = getPagePoint(pageMoveState.page, e.clientX, e.clientY);
-        const dx = point.x - pageMoveState.startX;
-        const dy = point.y - pageMoveState.startY;
-        pageMoveState.el.style.setProperty('left', `${pageMoveState.startLeft + dx}px`, 'important');
-        pageMoveState.el.style.setProperty('top', `${pageMoveState.startTop + dy}px`, 'important');
+        const { el, page, startLeft, startTop, startX, startY } = pageMoveState;
+        const point = getPagePoint(page, e.clientX, e.clientY, { clamp: false });
+        const dx = point.x - startX;
+        const dy = point.y - startY;
+        const next = clampElementPagePosition(el, page, startLeft + dx, startTop + dy);
+        el.style.setProperty('left', `${next.left}px`, 'important');
+        el.style.setProperty('top', `${next.top}px`, 'important');
+        if (!pageMoveState.minHeightRaf) {
+          pageMoveState.minHeightRaf = requestAnimationFrame(() => {
+            if (!pageMoveState) return;
+            pageMoveState.minHeightRaf = 0;
+            updatePageMinHeight(pageMoveState.page);
+          });
+        }
       });
 
       doc.addEventListener('pointerup', (e) => {
         if (!pageMoveState || e.pointerId !== pageMoveState.pointerId) return;
-        const { el, page, handle } = pageMoveState;
+        const { el, page, handle, prevZ, minHeightRaf } = pageMoveState;
+        if (minHeightRaf) cancelAnimationFrame(minHeightRaf);
         el.classList.remove('editor-moving');
         pageMoveState = null;
         try { handle.releasePointerCapture(e.pointerId); } catch (_) {}
+        bringElementToFrontLayer(el, page);
         updatePageMinHeight(page);
         addMoveHandle(el);
         selectElement(el);
@@ -2644,7 +2766,14 @@
 
       doc.addEventListener('pointercancel', (e) => {
         if (!pageMoveState || e.pointerId !== pageMoveState.pointerId) return;
-        pageMoveState.el.classList.remove('editor-moving');
+        const { el, prevZ, minHeightRaf } = pageMoveState;
+        if (minHeightRaf) cancelAnimationFrame(minHeightRaf);
+        el.classList.remove('editor-moving');
+        if (prevZ) {
+          el.style.setProperty('z-index', prevZ, 'important');
+        } else {
+          el.style.removeProperty('z-index');
+        }
         pageMoveState = null;
       });
     }
@@ -3487,12 +3616,14 @@
       }
     }
 
-    function getPagePoint(page, clientX, clientY) {
+    function getPagePoint(page, clientX, clientY, options = {}) {
+      const clamp = options.clamp !== false;
       const rect = page.getBoundingClientRect();
       const x = clientX - rect.left;
       const y = clientY - rect.top;
+      if (!clamp) return { x, y };
       const maxX = page.clientWidth;
-      const maxY = page.clientHeight;
+      const maxY = Math.max(page.clientHeight, page.scrollHeight || 0);
       return {
         x: Math.max(0, Math.min(x, maxX)),
         y: Math.max(0, Math.min(y, maxY))
@@ -4540,11 +4671,66 @@
       lastSyncedBodyHtml = null;
       await refreshFiles();
 
-      if (name.endsWith('.html') && !isCodeMode) {
+      if (name.endsWith('.html')) {
         showDocumentMode(true);
       } else {
         showCodeMode();
       }
+      syncViewModeButton();
+    }
+
+    function syncViewModeButton() {
+      if (!viewModeBtn) return;
+      const isNotebook = currentFile.endsWith('.html');
+      viewModeBtn.hidden = !isNotebook;
+      if (!isNotebook) return;
+      if (isCodeMode) {
+        viewModeBtn.textContent = 'Preview';
+        viewModeBtn.title = 'Switch to visual preview';
+        viewModeBtn.classList.remove('view-mode-active');
+      } else {
+        viewModeBtn.textContent = 'Code';
+        viewModeBtn.title = 'Switch to HTML code';
+        viewModeBtn.classList.add('view-mode-active');
+      }
+    }
+
+    function toggleViewMode() {
+      if (!currentFile.endsWith('.html')) {
+        showToast('Open a notebook (HTML file) first');
+        return;
+      }
+      if (isCodeMode) {
+        showDocumentMode(true);
+        showToast('Preview on');
+      } else {
+        flushPreviewSync();
+        showCodeMode();
+        hidePreviewError();
+        showToast('Code view — tap Preview to return');
+      }
+      syncViewModeButton();
+    }
+
+    function showPreviewError(message) {
+      if (!previewError) return;
+      if (previewErrorText && message) previewErrorText.textContent = message;
+      previewError.classList.add('visible');
+    }
+
+    function hidePreviewError() {
+      previewError?.classList.remove('visible');
+    }
+
+    function previewLoadedSuccessfully(doc) {
+      if (!doc?.body) return false;
+      const text = (doc.body.textContent || '').trim();
+      if (!text && !doc.querySelector('img, .page, .hero, .content')) return false;
+      const title = (doc.title || '').toLowerCase();
+      if (title.includes('tunnel') || title.includes('localtunnel') || title.includes('friendly reminder')) {
+        return false;
+      }
+      return true;
     }
 
     function ensureDocumentMode() {
@@ -4556,21 +4742,31 @@
       previewFrame.style.display = 'block';
       codeEditor.classList.remove('visible');
       syncPageNavVisibility();
+      syncViewModeButton();
+      hidePreviewError();
 
-      const needsReload = forceReload || !previewFrame.src || !previewFrame.contentDocument?.body;
+      let needsReload = forceReload || !previewFrame.src || !previewFrame.contentDocument?.body;
       if (!needsReload) {
         const doc = previewFrame.contentDocument;
-        setupPreviewDocument(doc);
-        restoreActivePage(doc, getCurrentPageId());
-        return;
+        if (!previewLoadedSuccessfully(doc)) {
+          needsReload = true;
+        } else {
+          setupPreviewDocument(doc);
+          restoreActivePage(doc, getCurrentPageId());
+          return;
+        }
       }
 
       resetEditorEnhancements();
       const pageId = getCurrentPageId();
-      previewFrame.src = '/preview?file=' + encodeURIComponent(currentFile) + '&t=' + Date.now() + '#' + encodeURIComponent(pageId);
+      previewFrame.src = '/preview?file=' + encodeURIComponent(currentFile) + '&t=' + Date.now();
       previewFrame.onload = () => {
         const doc = previewFrame.contentDocument;
-        if (!doc) return;
+        if (!doc || !previewLoadedSuccessfully(doc)) {
+          showPreviewError('Preview could not load. Keep Start Editor.command running on your Mac, then tap Try again.');
+          return;
+        }
+        hidePreviewError();
         const viewport = doc.querySelector('meta[name="viewport"]');
         if (viewport) {
           viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, viewport-fit=cover');
@@ -4589,6 +4785,7 @@
       previewFrame.style.display = 'none';
       codeEditor.classList.add('visible');
       syncPageNavVisibility();
+      syncViewModeButton();
     }
 
     let syncPreviewTimer = null;
@@ -4734,8 +4931,8 @@
           return;
         }
         document.getElementById('ftpPassword').value = '';
-        status.textContent = `Published to ${data.domain || 'iggypopm.com'} (${data.images || 0} images).`;
-        showToast('Published to iggypopm.com!');
+        status.textContent = `Published to ${data.domain || 'iggypopitaliangreyhounds.com'} (${data.images || 0} images).`;
+        showToast('Published to iggypopitaliangreyhounds.com!');
       } catch (err) {
         status.textContent = 'Publish failed — check your Mac is running the editor.';
         showToast('Publish failed');
@@ -5748,6 +5945,7 @@
     }
 
     async function initEditor() {
+      hidePreviewError();
       initFontFamilySelect();
       setupCropInteractions();
       setupDrawerScrollLock();
@@ -5778,6 +5976,10 @@
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') hideContextMenu();
     });
+    viewModeBtn?.addEventListener('click', toggleViewMode);
+    document.getElementById('retryPreviewBtn')?.addEventListener('click', () => {
+      if (currentFile.endsWith('.html')) showDocumentMode(true);
+    });
     document.getElementById('menuBtn').addEventListener('click', () => {
       if (isDrawerOpen(filesDrawer)) closeDrawers();
       else openDrawer(filesDrawer);
@@ -5788,7 +5990,7 @@
         return;
       }
       if (isCodeMode) {
-        showToast('Switch to document view to browse pages');
+        showToast('Tap Preview (top left) to browse pages');
         return;
       }
       togglePageNav();

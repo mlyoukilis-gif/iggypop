@@ -38,8 +38,7 @@ Press `Ctrl+C` to stop.
 ### Tips
 
 - Use **☰** to switch files, **📷 Photos** to upload images, **+ Box** to add galleries and text.
-- Add the anywhere URL to your phone's home screen for quick access (Safari → Share → Add to Home Screen).
-- Tap **Code** if you need raw HTML.
+- Tap **Code** (top bar) for raw HTML, then **Preview** to return to the visual editor.
 
 ## Security
 

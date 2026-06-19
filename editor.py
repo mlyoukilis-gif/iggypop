@@ -29,9 +29,10 @@ from pathlib import Path
 
 PORT = int(os.environ.get('PORT', '3000'))
 PROJECT_DIR = Path(__file__).parent.resolve()
-SITE_ROOT = PROJECT_DIR.parent.resolve()
+SITE_ROOT = PROJECT_DIR
 DEFAULT_FILE = 'Iggypop.html'
-SITE_DOMAIN = 'iggypopm.com'
+SITE_DOMAIN = 'iggypopitaliangreyhounds.com'
+SITE_DOMAINS = {'iggypopm.com', 'iggypopitaliangreyhounds.com'}
 FORM_EMAIL = 'mlyoukilis@gmail.com'
 FORM_SUBMIT_URL = f'https://formsubmit.co/ajax/{FORM_EMAIL}'
 PROJECT_PREFIX = 'Iggypop 2'
@@ -246,15 +247,15 @@ def start_tunnel(port):
     subdomain = config.get('subdomain', '')
     saved_url = config.get('public_url', '')
 
+    proc, url = start_cloudflared_quick_tunnel(port)
+    if url:
+        return proc, url
+
     proc, url = start_localtunnel(port, subdomain)
     if url:
         config['public_url'] = url
         config['subdomain'] = subdomain
         save_remote_config(config)
-        return proc, url
-
-    proc, url = start_cloudflared_quick_tunnel(port)
-    if url:
         return proc, url
 
     if saved_url:
@@ -405,6 +406,28 @@ def build_upload_package():
                 copied.add(filename)
                 break
 
+    # HTTPS redirects + security headers for Apache shared hosting
+    htaccess_source = PROJECT_DIR / '.htaccess'
+    if htaccess_source.is_file():
+        shutil.copy2(htaccess_source, upload_dir / '.htaccess')
+
+    # Favicon assets at web root (and images/ for hosts that serve static files there)
+    favicon_names = (
+        'favicon.ico', 'favicon.svg', 'apple-touch-icon.png',
+        'favicon-16.png', 'favicon-32.png',
+    )
+    for name in favicon_names:
+        for candidate in (PROJECT_DIR / name, upload_dir / name):
+            if candidate.is_file():
+                shutil.copy2(candidate, upload_dir / name)
+                shutil.copy2(candidate, images_dir / name)
+                break
+
+    for seo_name in ('robots.txt', 'sitemap.xml', 'sitemap.txt'):
+        seo_source = PROJECT_DIR / seo_name
+        if seo_source.is_file():
+            shutil.copy2(seo_source, upload_dir / seo_name)
+
     return upload_dir
 
 
@@ -465,6 +488,26 @@ def publish_via_ftp(config):
         with open(upload_dir / 'index.html', 'rb') as handle:
             ftp.storbinary('STOR index.html', handle)
 
+        for seo_name in ('robots.txt', 'sitemap.xml', 'sitemap.txt'):
+            seo_path = upload_dir / seo_name
+            if seo_path.is_file():
+                with open(seo_path, 'rb') as handle:
+                    ftp.storbinary(f'STOR {seo_name}', handle)
+
+        htaccess_path = upload_dir / '.htaccess'
+        if htaccess_path.is_file():
+            with open(htaccess_path, 'rb') as handle:
+                ftp.storbinary('STOR .htaccess', handle)
+
+        for favicon_name in (
+            'favicon.ico', 'favicon.svg', 'apple-touch-icon.png',
+            'favicon-16.png', 'favicon-32.png',
+        ):
+            favicon_path = upload_dir / favicon_name
+            if favicon_path.is_file():
+                with open(favicon_path, 'rb') as handle:
+                    ftp.storbinary(f'STOR {favicon_name}', handle)
+
         try:
             ftp.mkd('images')
         except ftplib.error_perm:
@@ -501,7 +544,7 @@ def publish_via_ftp(config):
 
 def is_public_site_host(handler):
     host = (handler.headers.get('Host') or '').split(':', 1)[0].lower()
-    return host in {SITE_DOMAIN, f'www.{SITE_DOMAIN}'}
+    return host in SITE_DOMAINS or any(host == f'www.{domain}' for domain in SITE_DOMAINS)
 
 
 def forward_form_submission(payload):
@@ -524,12 +567,14 @@ def forward_form_submission(payload):
         return json.loads(response.read().decode('utf-8'))
 
 
-def serve_file(handler, file_path):
+def serve_file(handler, file_path, extra_headers=None):
     data = file_path.read_bytes()
     content_type = 'text/html' if file_path.suffix.lower() == '.html' else 'application/octet-stream'
     handler.send_response(200)
     handler.send_header('Content-type', content_type)
     handler.send_header('Content-Length', str(len(data)))
+    for key, value in (extra_headers or {}).items():
+        handler.send_header(key, value)
     handler.end_headers()
     handler.wfile.write(data)
 
@@ -594,7 +639,10 @@ class EditorHandler(http.server.SimpleHTTPRequestHandler):
                 if not safe_path.exists() or not safe_path.is_file():
                     self.send_error(404, 'File not found')
                     return
-                return serve_file(self, safe_path)
+                return serve_file(self, safe_path, {
+                    'X-Frame-Options': 'SAMEORIGIN',
+                    'Content-Security-Policy': "frame-ancestors 'self'",
+                })
             except ValueError:
                 self.send_error(400, 'invalid file')
                 return
